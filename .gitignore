@@ -57,3 +57,7 @@ Thumbs.db
 debug.log
 report.json
 docs/
+
+# Sascha's backups
+*.bak
+
