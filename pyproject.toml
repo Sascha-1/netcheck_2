@@ -1,0 +1,92 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "netcheck"
+version = "1.0.0"
+description = "Network interface analysis tool for GNU/Linux"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "AGPL-3.0-or-later"}
+authors = [{name = "Netcheck Contributors"}]
+dependencies = ["requests>=2.31.0"]
+
+[project.urls]
+Homepage = "https://github.com/user/netcheck"
+Repository = "https://github.com/user/netcheck"
+
+[project.scripts]
+netcheck = "netcheck:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = ["-v", "--strict-markers"]
+
+[tool.coverage.run]
+source = ["."]
+omit = ["*/tests/*", "*/__pycache__/*"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_untyped_calls = true
+disallow_incomplete_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+files = [
+    "netcheck.py",
+    "orchestrator.py",
+    "display.py",
+    "export.py",
+    "models.py",
+    "enums.py",
+    "config.py",
+    "logging_config.py",
+    "network",
+    "utils",
+]
+exclude = [
+    "tests/",
+    "docs/",
+    "logs/",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "S", "B", "A", "D", "W"]
+
+[tool.pylint.main]
+jobs = 0
+py-version = "3.12"
+recursive = true
+ignore = ["tests", "docs", "logs", ".mypy_cache", ".pytest_cache", "__pycache__"]
+ingore-patterns = ["^\\..*"]
+fail-under = 9.0
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-module-docstring",
+]
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.pylint.logging]
+logging-format-style = "old"
+
+[tool.pylint.design]
+max-attributes = 16
+max-args = 6
+max-returns = 8
+
