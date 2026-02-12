@@ -2,6 +2,13 @@
 
 All models use dataclasses for immutability and type safety.
 Data markers (--, N/A, NONE, DEFAULT, QUERY FAILED) indicate missing/inapplicable values.
+
+Architecture: Nested dataclasses group related attributes (SRP principle):
+- IPConfig: IP address configuration
+- DNSConfig: DNS configuration and leak detection
+- RoutingInfo: Routing table information
+- VPNInfo: VPN-specific metadata
+- EgressInfo: External connectivity information
 """
 
 from dataclasses import dataclass
@@ -10,62 +17,72 @@ from enums import DnsLeakStatus, InterfaceType
 
 
 @dataclass
-class InterfaceInfo:
-    """Complete information about a single network interface.
-
-    All fields use data markers for missing/inapplicable values:
-        --: Not applicable (e.g., loopback external IP)
-        N/A: Not available (e.g., no IPv6 configured)
-        NONE: Explicitly no value (e.g., no default route)
-        DEFAULT: Using default (e.g., metric not explicitly set)
-        QUERY FAILED: API query attempted but failed
+class IPConfig:
+    """IP address configuration for an interface.
+    
+    Groups IPv4 and IPv6 addresses together following Single Responsibility.
     """
 
-    name: str  # Interface name (eth0, wlan0, tun0)
-    interface_type: InterfaceType  # Classification enum
-    device: str  # Hardware name or "N/A"
-    internal_ipv4: str  # Local IPv4 or "N/A"
-    internal_ipv6: str  # Global IPv6 or "N/A"
-    dns_servers: list[str]  # Configured DNS servers
-    current_dns: str | None  # Active DNS or None
-    dns_leak_status: DnsLeakStatus  # OK/PUBLIC/LEAK/WARN/--
-    external_ipv4: str  # Public IPv4 or --/QUERY FAILED
-    external_ipv6: str  # Public IPv6 or --/N/A/QUERY FAILED
-    egress_isp: str  # ISP name+AS or --/QUERY FAILED
-    egress_country: str  # Country code or --/QUERY FAILED
-    default_gateway: str  # Gateway IP or NONE
-    metric: str  # Metric (number/DEFAULT/NONE)
-    vpn_server_ip: str | None  # VPN endpoint (VPN interfaces only)
-    carries_vpn: bool  # True if carries VPN traffic
+    ipv4: str  # IPv4 address or "N/A"
+    ipv6: str  # IPv6 address or "N/A"
 
     @classmethod
-    def create_empty(cls, name: str) -> "InterfaceInfo":
-        """Create interface with default markers.
+    def create_empty(cls) -> "IPConfig":
+        """Create IP config with default markers."""
+        return cls(ipv4="N/A", ipv6="N/A")
 
-        Args:
-            name: Interface name
 
-        Returns:
-            InterfaceInfo with all fields set to appropriate default markers.
-        """
+@dataclass
+class DNSConfig:
+    """DNS configuration and leak detection status.
+    
+    Groups all DNS-related information together.
+    """
+
+    servers: list[str]  # Configured DNS servers
+    current_server: str | None  # Active DNS server or None
+    leak_status: DnsLeakStatus  # OK/PUBLIC/LEAK/WARN/--
+
+    @classmethod
+    def create_empty(cls) -> "DNSConfig":
+        """Create DNS config with default markers."""
         return cls(
-            name=name,
-            interface_type=InterfaceType.UNKNOWN,
-            device="N/A",
-            internal_ipv4="N/A",
-            internal_ipv6="N/A",
-            dns_servers=[],
-            current_dns=None,
-            dns_leak_status=DnsLeakStatus.NOT_APPLICABLE,
-            external_ipv4="--",
-            external_ipv6="--",
-            egress_isp="--",
-            egress_country="--",
-            default_gateway="NONE",
-            metric="NONE",
-            vpn_server_ip=None,
-            carries_vpn=False,
+            servers=[],
+            current_server=None,
+            leak_status=DnsLeakStatus.NOT_APPLICABLE,
         )
+
+
+@dataclass
+class RoutingInfo:
+    """Routing table information for an interface.
+    
+    Groups gateway and metric together.
+    """
+
+    gateway: str  # Gateway IP or "NONE"
+    metric: str  # Metric (number/DEFAULT/NONE)
+
+    @classmethod
+    def create_empty(cls) -> "RoutingInfo":
+        """Create routing info with default markers."""
+        return cls(gateway="NONE", metric="NONE")
+
+
+@dataclass
+class VPNInfo:
+    """VPN-specific metadata.
+    
+    Groups VPN server and carrier information.
+    """
+
+    server_ip: str | None  # VPN endpoint (VPN interfaces only)
+    carries_vpn: bool  # True if this interface carries VPN traffic
+
+    @classmethod
+    def create_empty(cls) -> "VPNInfo":
+        """Create VPN info with default markers."""
+        return cls(server_ip=None, carries_vpn=False)
 
 
 @dataclass
@@ -92,4 +109,60 @@ class EgressInfo:
             external_ipv6="QUERY FAILED",
             isp="QUERY FAILED",
             country="QUERY FAILED",
+        )
+
+    @classmethod
+    def create_empty(cls) -> "EgressInfo":
+        """Create egress info with default markers for non-active interfaces."""
+        return cls(
+            external_ip="--",
+            external_ipv6="--",
+            isp="--",
+            country="--",
+        )
+
+
+@dataclass
+class InterfaceInfo:
+    """Complete information about a single network interface.
+    
+    Uses nested dataclasses to group related attributes (SRP).
+    Now has 8 top-level attributes (was 16 - complies with pylint limit of 10).
+    
+    All fields use data markers for missing/inapplicable values:
+        --: Not applicable (e.g., loopback external IP)
+        N/A: Not available (e.g., no IPv6 configured)
+        NONE: Explicitly no value (e.g., no default route)
+        DEFAULT: Using default (e.g., metric not explicitly set)
+        QUERY FAILED: API query attempted but failed
+    """
+
+    name: str  # Interface name (eth0, wlan0, tun0)
+    interface_type: InterfaceType  # Classification enum
+    device: str  # Hardware name or "N/A"
+    ip: IPConfig  # IP address configuration
+    dns: DNSConfig  # DNS configuration and leak detection
+    egress: EgressInfo  # External IP and ISP information
+    routing: RoutingInfo  # Routing table information
+    vpn: VPNInfo  # VPN-specific metadata
+
+    @classmethod
+    def create_empty(cls, name: str) -> "InterfaceInfo":
+        """Create interface with default markers.
+
+        Args:
+            name: Interface name
+
+        Returns:
+            InterfaceInfo with all nested configs initialized.
+        """
+        return cls(
+            name=name,
+            interface_type=InterfaceType.UNKNOWN,
+            device="N/A",
+            ip=IPConfig.create_empty(),
+            dns=DNSConfig.create_empty(),
+            egress=EgressInfo.create_empty(),
+            routing=RoutingInfo.create_empty(),
+            vpn=VPNInfo.create_empty(),
         )

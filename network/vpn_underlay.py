@@ -10,6 +10,7 @@ from enums import InterfaceType
 from logging_config import get_logger
 from models import InterfaceInfo
 from utils import run_command, sanitize_for_log
+from utils.metric_sort import get_metric_sort_key
 
 logger = get_logger(__name__)
 
@@ -21,8 +22,8 @@ def detect_vpn_underlay(interfaces: list[InterfaceInfo]) -> None:
         1. For each VPN interface:
            a. Get VPN server endpoint
            b. Find physical carrier interface
-           c. Set vpn_server_ip on VPN interface
-           d. Mark carrier with carries_vpn=True
+           c. Set vpn.server_ip on VPN interface
+           d. Mark carrier with vpn.carries_vpn=True
 
     Args:
         interfaces: List of InterfaceInfo objects (modified in-place)
@@ -33,7 +34,7 @@ def detect_vpn_underlay(interfaces: list[InterfaceInfo]) -> None:
 
         # Get VPN server endpoint
         vpn_server_ip = get_vpn_server_endpoint(
-            interface.name, interface.interface_type, interface.internal_ipv4
+            interface.name, interface.interface_type, interface.ip.ipv4
         )
 
         if not vpn_server_ip:
@@ -43,7 +44,7 @@ def detect_vpn_underlay(interfaces: list[InterfaceInfo]) -> None:
             )
             continue
 
-        interface.vpn_server_ip = vpn_server_ip
+        interface.vpn.server_ip = vpn_server_ip
         logger.debug(
             "[%s] VPN server: %s",
             sanitize_for_log(interface.name),
@@ -62,13 +63,13 @@ def detect_vpn_underlay(interfaces: list[InterfaceInfo]) -> None:
             # Mark carrier
             for iface in interfaces:
                 if iface.name == carrier:
-                    iface.carries_vpn = True
+                    iface.vpn.carries_vpn = True
                     break
 
 
 def get_vpn_server_endpoint(
-    iface_name: str,
-    iface_type: InterfaceType | str,
+    _iface_name: str,
+    _iface_type: InterfaceType | str,
     local_ip: str,
 ) -> str | None:
     """Get VPN server endpoint IP.
@@ -87,8 +88,8 @@ def get_vpn_server_endpoint(
         - Ignore CGNAT
 
     Args:
-        iface_name: Interface name
-        iface_type: Interface type (unused, kept for API compatibility)
+        _iface_name: Interface name (unused, kept for API compatibility)
+        _iface_type: Interface type (unused, kept for API compatibility)
         local_ip: VPN interface local IP address
 
     Returns:
@@ -113,7 +114,7 @@ def get_vpn_server_endpoint(
         if not match:
             continue
 
-        local_addr, local_port, remote_addr, remote_port = match.groups()
+        local_addr, _local_port, remote_addr, remote_port = match.groups()
         remote_port_int = int(remote_port)
 
         # Filter: ignore DNS
@@ -168,7 +169,7 @@ def _is_private_or_cgnat(ip: str) -> bool:
 
 
 def find_physical_interface_for_vpn(
-    vpn_server_ip: str,
+    _vpn_server_ip: str,
     interfaces: list[InterfaceInfo],
 ) -> str | None:
     """Find physical interface carrying VPN traffic.
@@ -180,7 +181,7 @@ def find_physical_interface_for_vpn(
         4. Return first (highest priority)
 
     Args:
-        vpn_server_ip: VPN server IP address (unused, kept for future routing lookup)
+        _vpn_server_ip: VPN server IP address (unused, kept for future routing lookup)
         interfaces: List of all interfaces
 
     Returns:
@@ -198,23 +199,14 @@ def find_physical_interface_for_vpn(
             continue
 
         # Must have default gateway
-        if interface.default_gateway in ("NONE", "N/A", "--"):
+        if interface.routing.gateway in ("NONE", "N/A", "--"):
             continue
 
-        candidates.append((interface.name, interface.metric))
+        candidates.append((interface.name, interface.routing.metric))
 
     if not candidates:
         return None
 
-    # Sort by metric (deterministic - never guess)
-    def sort_key(candidate: tuple[str, str]) -> tuple[int, int]:
-        name, metric = candidate
-        if metric.isdigit():
-            return (0, int(metric))  # Numeric: category 0
-        elif metric == "DEFAULT":
-            return (1, 0)  # DEFAULT: category 1 (never assume numeric value)
-        else:
-            return (2, 0)  # NONE: category 2
-
-    candidates.sort(key=sort_key)
+    # Sort using helper function
+    candidates.sort(key=lambda candidate: get_metric_sort_key(candidate[1]))
     return candidates[0][0]

@@ -119,12 +119,12 @@ def get_ipv6_single_attempt(url: str, timeout: int) -> requests.Response | None:
         return None
 
 
-def validate_api_response(data: dict[str, Any], ip_version: str) -> bool:
+def validate_api_response(data: dict[str, Any], _ip_version: str) -> bool:
     """Validate ipinfo.io response.
 
     Args:
         data: JSON response data
-        ip_version: "IPv4" or "IPv6" (for logging)
+        _ip_version: "IPv4" or "IPv6" (unused, kept for future logging)
 
     Returns:
         True if response contains all required fields, False otherwise.

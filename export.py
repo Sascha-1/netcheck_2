@@ -1,6 +1,7 @@
 """JSON export functionality.
 
 Exports network interface data to JSON format with metadata.
+Flattens nested dataclass structure for JSON compatibility.
 """
 
 import json
@@ -34,14 +35,14 @@ def export_to_json(
         "summary": {
             # VPN is active if any VPN interface has an IP address configured
             "vpn_active": any(
-                i.interface_type == InterfaceType.VPN and i.internal_ipv4 != "N/A"
+                i.interface_type == InterfaceType.VPN and i.ip.ipv4 != "N/A"
                 for i in interfaces
             ),
             "vpn_interfaces": sum(
                 1 for i in interfaces if i.interface_type == InterfaceType.VPN
             ),
             "dns_leak_detected": any(
-                i.dns_leak_status == DnsLeakStatus.LEAK for i in interfaces
+                i.dns.leak_status == DnsLeakStatus.LEAK for i in interfaces
             ),
         },
     }
@@ -56,7 +57,10 @@ def export_to_json(
 
 
 def _interface_to_dict(interface: InterfaceInfo) -> dict[str, Any]:
-    """Convert InterfaceInfo to dictionary (handle enums).
+    """Convert InterfaceInfo to dictionary (flatten nested structure).
+    
+    Flattens nested dataclasses for JSON compatibility while maintaining
+    logical grouping in the output structure.
 
     Args:
         interface: InterfaceInfo object
@@ -68,17 +72,22 @@ def _interface_to_dict(interface: InterfaceInfo) -> dict[str, Any]:
         "name": interface.name,
         "interface_type": interface.interface_type.value,
         "device": interface.device,
-        "internal_ipv4": interface.internal_ipv4,
-        "internal_ipv6": interface.internal_ipv6,
-        "dns_servers": interface.dns_servers,
-        "current_dns": interface.current_dns,
-        "dns_leak_status": interface.dns_leak_status.value,
-        "external_ipv4": interface.external_ipv4,
-        "external_ipv6": interface.external_ipv6,
-        "egress_isp": interface.egress_isp,
-        "egress_country": interface.egress_country,
-        "default_gateway": interface.default_gateway,
-        "metric": interface.metric,
-        "vpn_server_ip": interface.vpn_server_ip,
-        "carries_vpn": interface.carries_vpn,
+        # IP configuration (nested in model, flat in JSON)
+        "internal_ipv4": interface.ip.ipv4,
+        "internal_ipv6": interface.ip.ipv6,
+        # DNS configuration (nested in model, flat in JSON)
+        "dns_servers": interface.dns.servers,
+        "current_dns": interface.dns.current_server,
+        "dns_leak_status": interface.dns.leak_status.value,
+        # Egress information (nested in model, flat in JSON)
+        "external_ipv4": interface.egress.external_ip,
+        "external_ipv6": interface.egress.external_ipv6,
+        "egress_isp": interface.egress.isp,
+        "egress_country": interface.egress.country,
+        # Routing information (nested in model, flat in JSON)
+        "default_gateway": interface.routing.gateway,
+        "metric": interface.routing.metric,
+        # VPN information (nested in model, flat in JSON)
+        "vpn_server_ip": interface.vpn.server_ip,
+        "carries_vpn": interface.vpn.carries_vpn,
     }

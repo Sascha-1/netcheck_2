@@ -45,7 +45,9 @@ def run_command(cmd: list[str]) -> str | None:
         return None
     except FileNotFoundError:
         return None
-    except Exception:
+    except (OSError, ValueError, RuntimeError) as e:
+        # Catch specific subprocess-related exceptions
+        del e  # Variable is intentionally unused
         return None
 
 

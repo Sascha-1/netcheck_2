@@ -10,83 +10,53 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "AGPL-3.0-or-later"}
 authors = [{name = "Netcheck Contributors"}]
-dependencies = ["requests>=2.31.0"]
-
-[project.urls]
-Homepage = "https://github.com/user/netcheck"
-Repository = "https://github.com/user/netcheck"
-
-[project.scripts]
-netcheck = "netcheck:main"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-addopts = ["-v", "--strict-markers"]
-
-[tool.coverage.run]
-source = ["."]
-omit = ["*/tests/*", "*/__pycache__/*"]
+# Pinning the major version for stability
+dependencies = ["requests>=2.31.0,<3.0.0"]
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_untyped_calls = true
-disallow_incomplete_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-files = [
-    "netcheck.py",
-    "orchestrator.py",
-    "display.py",
-    "export.py",
-    "models.py",
-    "enums.py",
-    "config.py",
-    "logging_config.py",
-    "network",
-    "utils",
-]
-exclude = [
-    "tests/",
-    "docs/",
-    "logs/",
-]
+# Additional strictness beyond 'strict = true'
+disallow_any_generics = true
+disallow_subclassing_any = true
+warn_unreachable = true
+pretty = true
+show_error_codes = true
+# Use 'packages' or 'modules' instead of listing every file manually
+packages = ["netcheck", "utils", "network"] 
 
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+fix = true # Automatically fix what can be fixed
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "UP", "S", "B", "A", "D", "W"]
+# Expanded Rule Selection:
+# E/W: Error/Warning, F: Pyflakes, I: Isort (sorting imports)
+# N: Naming, UP: Upgrade (Python 3.12 syntax), S: Security
+# B: Bugbear (common bugs), A: Builtins, D: Docstrings
+# ARG: Unused arguments, RET: Return statement logic
+# PT: Pytest, PL: Pylint-equivalent rules
+select = ["E", "F", "I", "N", "UP", "S", "B", "A", "D", "W", "ARG", "RET", "PT", "PL"]
+ignore = ["D100", "D104"] # Ignore missing docstrings in __init__ and modules
+
+[tool.ruff.lint.pydocstyle]
+convention = "google" # Enforces Google-style docstrings
 
 [tool.pylint.main]
-jobs = 0
+jobs = 0 # Use all available CPU cores
 py-version = "3.12"
-recursive = true
-ignore = ["tests", "docs", "logs", ".mypy_cache", ".pytest_cache", "__pycache__"]
-ingore-patterns = ["^\\..*"]
-fail-under = 9.0
-
-[tool.pylint.messages_control]
-disable = [
-    "missing-module-docstring",
-]
-
-[tool.pylint.format]
-max-line-length = 100
-
-[tool.pylint.logging]
-logging-format-style = "old"
+fail-under = 10.0 # Demand perfection
 
 [tool.pylint.design]
-max-attributes = 16
-max-args = 6
-max-returns = 8
+max-attributes = 10 # Tightened from 16
+max-args = 5       # Tightened from 6
+max-returns = 6    # Standard limit we discussed
+
+[tool.pylint.logging]
+logging-format-style = "old" # Use {} style instead of % style ?
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-v", "--strict-markers", "--cov=.", "--cov-report=term-missing"]
 

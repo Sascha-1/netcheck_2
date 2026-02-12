@@ -114,7 +114,7 @@ def check_dns_leaks_all_interfaces(interfaces: list[InterfaceInfo]) -> None:
     Algorithm:
         1. Categorize DNS servers (VPN vs ISP)
         2. For each interface: detect_dns_leak()
-        3. Update dns_leak_status in-place
+        3. Update dns.leak_status in-place
 
     Args:
         interfaces: List of InterfaceInfo objects to check (modified in-place)
@@ -128,14 +128,15 @@ def check_dns_leaks_all_interfaces(interfaces: list[InterfaceInfo]) -> None:
 
         status = detect_dns_leak(
             interface.name,
-            interface.internal_ipv4,
-            interface.dns_servers,
+            interface.ip.ipv4,
+            interface.dns.servers,
             is_vpn,
             vpn_dns,
             isp_dns,
         )
 
-        interface.dns_leak_status = DnsLeakStatus(status)
+        # Update leak status in DNS config
+        interface.dns.leak_status = DnsLeakStatus(status)
 
 
 def collect_dns_servers_by_category(
@@ -154,22 +155,22 @@ def collect_dns_servers_by_category(
 
     for interface in interfaces:
         if interface.interface_type == InterfaceType.VPN:
-            vpn_dns_set.update(interface.dns_servers)
+            vpn_dns_set.update(interface.dns.servers)
         elif interface.interface_type in (
             InterfaceType.ETHERNET,
             InterfaceType.WIRELESS,
             InterfaceType.TETHER,
         ):
-            isp_dns_set.update(interface.dns_servers)
+            isp_dns_set.update(interface.dns.servers)
 
     return (list(vpn_dns_set), list(isp_dns_set))
 
 
 def detect_dns_leak(
     interface_name: str,
-    interface_ip: str,
+    _interface_ip: str,
     configured_dns: list[str],
-    is_vpn: bool,
+    _is_vpn: bool,
     vpn_dns: list[str],
     isp_dns: list[str],
 ) -> str:
@@ -192,9 +193,9 @@ def detect_dns_leak(
 
     Args:
         interface_name: Interface name
-        interface_ip: Interface IP address (unused, kept for API compatibility)
+        _interface_ip: Interface IP address (unused, kept for API compatibility)
         configured_dns: List of configured DNS servers
-        is_vpn: True if this is a VPN interface
+        _is_vpn: True if this is a VPN interface (unused, kept for API compatibility)
         vpn_dns: List of all VPN DNS servers in system
         isp_dns: List of all ISP DNS servers in system
 

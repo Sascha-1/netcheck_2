@@ -5,9 +5,10 @@ Main entry point for the netcheck command-line tool.
 
 import argparse
 import sys
+import traceback
 from pathlib import Path
 
-import config
+from config import ExitCode
 from display import format_output
 from export import export_to_json
 from logging_config import get_logger, setup_logging
@@ -76,7 +77,7 @@ Exit codes:
     # Validation: --output requires --export
     if args.output and not args.export:
         print("Error: --output requires --export", file=sys.stderr)
-        sys.exit(config.ExitCodes.INVALID_ARGUMENTS)
+        sys.exit(ExitCode.INVALID_ARGUMENTS)
 
     return args
 
@@ -104,7 +105,7 @@ def main() -> None:
     # Check dependencies
     if not check_dependencies():
         logger.error("Missing required dependencies - cannot continue")
-        sys.exit(config.ExitCodes.MISSING_DEPENDENCIES)
+        sys.exit(ExitCode.MISSING_DEPENDENCIES)
 
     try:
         # Collect data
@@ -113,7 +114,7 @@ def main() -> None:
 
         if not interfaces:
             logger.error("No network interfaces found")
-            sys.exit(config.ExitCodes.GENERAL_ERROR)
+            sys.exit(ExitCode.GENERAL_ERROR)
 
         logger.info("Successfully collected data for %d interfaces", len(interfaces))
 
@@ -128,18 +129,16 @@ def main() -> None:
         else:
             format_output(interfaces)
 
-        sys.exit(config.ExitCodes.SUCCESS)
+        sys.exit(ExitCode.SUCCESS)
 
     except KeyboardInterrupt:
         logger.error("Interrupted by user")
-        sys.exit(config.ExitCodes.GENERAL_ERROR)
-    except Exception as e:
-        logger.error("Unexpected error: %s", sanitize_for_log(str(e)))
+        sys.exit(ExitCode.GENERAL_ERROR)
+    except (OSError, IOError, ValueError, RuntimeError) as e:
+        logger.error("Error during execution: %s", sanitize_for_log(str(e)))
         if args.verbose:
-            import traceback
-
             traceback.print_exc()
-        sys.exit(config.ExitCodes.GENERAL_ERROR)
+        sys.exit(ExitCode.GENERAL_ERROR)
 
 
 if __name__ == "__main__":

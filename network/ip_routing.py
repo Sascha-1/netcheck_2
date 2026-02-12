@@ -7,6 +7,7 @@ import re
 
 from logging_config import get_logger
 from utils import run_command, sanitize_for_log
+from utils.metric_sort import get_metric_sort_key
 
 logger = get_logger(__name__)
 
@@ -191,15 +192,6 @@ def get_active_interface() -> str | None:
     if not routes:
         return None
 
-    # Sort: numeric metrics first (lowest), then DEFAULT, then NONE
-    def sort_key(route: tuple[str, str]) -> tuple[int, int]:
-        iface, metric = route
-        if metric.isdigit():
-            return (0, int(metric))  # Numeric: category 0, sorted ascending
-        elif metric == "DEFAULT":
-            return (1, 0)  # DEFAULT: category 1 (never assume numeric value)
-        else:
-            return (2, 0)  # NONE or other: category 2
-
-    routes.sort(key=sort_key)
+    # Sort using helper function
+    routes.sort(key=lambda route: get_metric_sort_key(route[1]))
     return routes[0][0]

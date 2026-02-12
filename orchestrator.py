@@ -5,7 +5,7 @@ Coordinates all network modules to collect complete interface information.
 
 import config
 from logging_config import get_logger
-from models import EgressInfo, InterfaceInfo
+from models import DNSConfig, EgressInfo, InterfaceInfo, IPConfig, RoutingInfo
 from network import (
     check_dns_leaks_all_interfaces,
     detect_interface_type,
@@ -108,7 +108,7 @@ def collect_network_data() -> list[InterfaceInfo]:
                 iface_name, active_interface, egress, all_ipv4, all_ipv6
             )
             interfaces.append(interface)
-        except Exception as e:
+        except (OSError, IOError, ValueError, RuntimeError) as e:
             logger.warning(
                 "Failed to process %s: %s",
                 sanitize_for_log(iface_name),
@@ -165,19 +165,23 @@ def process_single_interface(
         sanitize_for_log(interface.device),
     )
 
-    # Extract IPs from batch results
-    interface.internal_ipv4 = all_ipv4.get(iface_name, "N/A")
-    interface.internal_ipv6 = all_ipv6.get(iface_name, "N/A")
+    # Set IP configuration
+    interface.ip = IPConfig(
+        ipv4=all_ipv4.get(iface_name, "N/A"),
+        ipv6=all_ipv6.get(iface_name, "N/A"),
+    )
 
     # Get DNS configuration
     dns_servers, current_dns = get_interface_dns(iface_name)
-    interface.dns_servers = dns_servers
-    interface.current_dns = current_dns
+    interface.dns = DNSConfig(
+        servers=dns_servers,
+        current_server=current_dns,
+        leak_status=interface.dns.leak_status,  # Keep default, will be set by check_dns_leaks
+    )
 
-    # Get routing info (gateway + metric in one call)
+    # Get routing info
     gateway, metric = get_route_info(iface_name)
-    interface.default_gateway = gateway
-    interface.metric = metric
+    interface.routing = RoutingInfo(gateway=gateway, metric=metric)
     logger.debug(
         "[%s] Gateway: %s, Metric: %s",
         sanitize_for_log(iface_name),
@@ -187,9 +191,8 @@ def process_single_interface(
 
     # Attach egress info if active interface
     if iface_name == active_interface and egress:
-        interface.external_ipv4 = egress.external_ip
-        interface.external_ipv6 = egress.external_ipv6
-        interface.egress_isp = egress.isp
-        interface.egress_country = egress.country
+        interface.egress = egress
+    else:
+        interface.egress = EgressInfo.create_empty()
 
     return interface

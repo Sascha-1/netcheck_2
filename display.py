@@ -1,9 +1,13 @@
 """Table output formatting and display.
 
 Formats network interface data as a color-coded table.
+Uses rule-based pattern for color selection (maintainable, extensible).
 """
 
+from typing import Callable
+
 import config
+from config import Color
 from enums import DnsLeakStatus, InterfaceType
 from models import InterfaceInfo
 from utils import cleanup_device_name, cleanup_isp_name, shorten_text
@@ -40,7 +44,7 @@ def format_output(interfaces: list[InterfaceInfo]) -> None:
     for interface in interfaces:
         # Clean names
         device = cleanup_device_name(interface.device)
-        isp = cleanup_isp_name(interface.egress_isp)
+        isp = cleanup_isp_name(interface.egress.isp)
 
         # Get color
         color = _get_row_color(interface)
@@ -50,15 +54,15 @@ def format_output(interfaces: list[InterfaceInfo]) -> None:
             interface.name,
             interface.interface_type.value,
             device,
-            interface.internal_ipv4,
-            interface.internal_ipv6,
-            interface.current_dns or "--",
-            interface.external_ipv4,
-            interface.external_ipv6,
+            interface.ip.ipv4,
+            interface.ip.ipv6,
+            interface.dns.current_server or "--",
+            interface.egress.external_ip,
+            interface.egress.external_ipv6,
             isp,
-            interface.egress_country,
-            interface.default_gateway,
-            interface.metric,
+            interface.egress.country,
+            interface.routing.gateway,
+            interface.routing.metric,
         ]
 
         # Truncate and pad
@@ -70,34 +74,42 @@ def format_output(interfaces: list[InterfaceInfo]) -> None:
         # Print with color
         row = config.COLUMN_SEPARATOR.join(row_parts)
         if color:
-            print(f"{color}{row}{config.Colors.RESET}")
+            print(f"{color}{row}{Color.RESET}")
         else:
             print(row)
 
     # Print footer
     print("=" * 228)
     print("\nColor Legend:")
-    print(
-        f"{config.Colors.GREEN}GREEN{config.Colors.RESET}  - VPN tunnel (encrypted, DNS OK)"
-    )
-    print(f"{config.Colors.CYAN}CYAN{config.Colors.RESET}   - Physical interface carrying VPN")
-    print(f"{config.Colors.RED}RED{config.Colors.RESET}    - Direct internet (unencrypted)")
-    print(
-        f"{config.Colors.YELLOW}YELLOW{config.Colors.RESET} - DNS leak, public DNS, or warning"
-    )
+    print(f"{Color.GREEN}GREEN{Color.RESET}  - VPN tunnel (encrypted, DNS OK)")
+    print(f"{Color.CYAN}CYAN{Color.RESET}   - Physical interface carrying VPN")
+    print(f"{Color.RED}RED{Color.RESET}    - Direct internet (unencrypted)")
+    print(f"{Color.YELLOW}YELLOW{Color.RESET} - DNS leak, public DNS, or warning")
     print("\nDNS Status Meanings:")
     print("  OK     - Using VPN DNS (best privacy - VPN provider sees queries)")
     print(
         "  PUBLIC - Using public DNS (Cloudflare/Google/Quad9 - not leaking to ISP, but suboptimal)"
     )
-    print("  LEAK   - Using ISP DNS (security issue - ISP sees all queries, defeats VPN privacy)")
+    print(
+        "  LEAK   - Using ISP DNS (security issue - ISP sees all queries, defeats VPN privacy)"
+    )
     print("  WARN   - Using unknown DNS (investigate further)")
     print("  --     - Not applicable (no VPN active or no DNS configured)\n")
 
 
+# Type alias for color selection predicate
+ColorPredicate = Callable[[InterfaceInfo], bool]
+
+
 def _get_row_color(interface: InterfaceInfo) -> str:
     """Determine row color based on priority rules.
-
+    
+    Uses rule-based pattern for maintainability:
+    - Easy to add/remove/reorder rules
+    - Each rule is self-documenting
+    - No complex nested if/elif chains
+    - Follows Open/Closed Principle
+    
     Priority (first match wins):
         1. DNS leak (LEAK) → YELLOW
         2. DNS warning → YELLOW
@@ -106,7 +118,7 @@ def _get_row_color(interface: InterfaceInfo) -> str:
         5. VPN with external IP → GREEN
         6. Carries VPN traffic → CYAN
         7. Direct internet → RED
-        8. No color
+        8. No color (default)
 
     Args:
         interface: InterfaceInfo object
@@ -114,40 +126,52 @@ def _get_row_color(interface: InterfaceInfo) -> str:
     Returns:
         ANSI color code or empty string for no color.
     """
-    # Priority 1: DNS leak (security issue)
-    if interface.dns_leak_status == DnsLeakStatus.LEAK:
-        return config.Colors.YELLOW
+    # Define rules as (predicate, color) tuples
+    # Rules are evaluated in order - first match wins
+    rules: list[tuple[ColorPredicate, str]] = [
+        # Priority 1: DNS leak (security issue)
+        (
+            lambda i: i.dns.leak_status == DnsLeakStatus.LEAK,
+            Color.YELLOW,
+        ),
+        # Priority 2: DNS warning
+        (
+            lambda i: i.dns.leak_status == DnsLeakStatus.WARN,
+            Color.YELLOW,
+        ),
+        # Priority 3: Public DNS (suboptimal)
+        (
+            lambda i: i.dns.leak_status == DnsLeakStatus.PUBLIC,
+            Color.YELLOW,
+        ),
+        # Priority 4: VPN with OK DNS
+        (
+            lambda i: i.interface_type == InterfaceType.VPN
+            and i.dns.leak_status == DnsLeakStatus.OK,
+            Color.GREEN,
+        ),
+        # Priority 5: VPN with external IP
+        (
+            lambda i: i.interface_type == InterfaceType.VPN
+            and i.egress.external_ip not in ("--", "N/A", "QUERY FAILED"),
+            Color.GREEN,
+        ),
+        # Priority 6: Carries VPN traffic
+        (
+            lambda i: i.vpn.carries_vpn,
+            Color.CYAN,
+        ),
+        # Priority 7: Direct internet
+        (
+            lambda i: i.egress.external_ip not in ("--", "N/A", "QUERY FAILED", "NONE"),
+            Color.RED,
+        ),
+    ]
 
-    # Priority 2: DNS warning
-    if interface.dns_leak_status == DnsLeakStatus.WARN:
-        return config.Colors.YELLOW
+    # Find first matching rule
+    for predicate, color in rules:
+        if predicate(interface):
+            return color
 
-    # Priority 3: Public DNS (suboptimal)
-    if interface.dns_leak_status == DnsLeakStatus.PUBLIC:
-        return config.Colors.YELLOW
-
-    # Priority 4: VPN with OK DNS
-    if (
-        interface.interface_type == InterfaceType.VPN
-        and interface.dns_leak_status == DnsLeakStatus.OK
-    ):
-        return config.Colors.GREEN
-
-    # Priority 5: VPN with external IP
-    if interface.interface_type == InterfaceType.VPN and interface.external_ipv4 not in (
-        "--",
-        "N/A",
-        "QUERY FAILED",
-    ):
-        return config.Colors.GREEN
-
-    # Priority 6: Carries VPN traffic
-    if interface.carries_vpn:
-        return config.Colors.CYAN
-
-    # Priority 7: Direct internet
-    if interface.external_ipv4 not in ("--", "N/A", "QUERY FAILED", "NONE"):
-        return config.Colors.RED
-
-    # Priority 8: No color
+    # Default: no color
     return ""

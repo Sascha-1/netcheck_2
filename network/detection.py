@@ -1,11 +1,13 @@
 """Interface detection and hardware identification.
 
 Classifies network interfaces and identifies hardware devices.
+Uses rule-based detection pattern for maintainability.
 """
 
 import re
 from functools import lru_cache
 from pathlib import Path
+from typing import Callable
 
 import config
 from enums import InterfaceType
@@ -41,9 +43,19 @@ def get_interface_list() -> list[str]:
     return interfaces
 
 
-def detect_interface_type(iface_name: str) -> InterfaceType:
-    """Detect interface type using priority chain.
+# Type alias for interface type detection predicate
+TypeDetector = Callable[[str], tuple[bool, InterfaceType | None]]
 
+
+def detect_interface_type(iface_name: str) -> InterfaceType:
+    """Detect interface type using rule-based priority chain.
+    
+    Uses rule-based pattern for maintainability:
+    - Easy to add/remove/reorder detection rules
+    - Each detector is self-contained
+    - No complex nested if/elif chains
+    - Follows Open/Closed Principle
+    
     Priority:
         1. Loopback (name == "lo")
         2. USB tethering (sysfs driver check)
@@ -51,7 +63,7 @@ def detect_interface_type(iface_name: str) -> InterfaceType:
         4. Wireless (sysfs phy80211)
         5. Kernel type (ip -d link show)
         6. Name patterns
-        7. UNKNOWN
+        7. UNKNOWN (default)
 
     Args:
         iface_name: Interface name
@@ -59,41 +71,89 @@ def detect_interface_type(iface_name: str) -> InterfaceType:
     Returns:
         InterfaceType enum value
     """
-    # Priority 1: Loopback
+    # Define detection rules as functions
+    # Each returns (matched: bool, type: InterfaceType | None)
+    detectors: list[TypeDetector] = [
+        _detect_loopback,
+        _detect_usb_tether,
+        _detect_vpn_by_name,
+        _detect_wireless,
+        _detect_by_kernel_type,
+        _detect_by_name_pattern,
+    ]
+
+    # Try each detector in priority order
+    for detector in detectors:
+        matched, iface_type = detector(iface_name)
+        if matched and iface_type is not None:
+            return iface_type
+
+    # Default: unknown
+    return InterfaceType.UNKNOWN
+
+
+# Detection rule implementations
+# Each returns (matched, type) tuple
+
+
+def _detect_loopback(iface_name: str) -> tuple[bool, InterfaceType | None]:
+    """Detect loopback interface."""
     if iface_name == "lo":
-        return InterfaceType.LOOPBACK
+        return (True, InterfaceType.LOOPBACK)
+    return (False, None)
 
-    # Priority 2: USB tethering
+
+def _detect_usb_tether(iface_name: str) -> tuple[bool, InterfaceType | None]:
+    """Detect USB tethered device."""
     if is_usb_tethered_device(iface_name):
-        return InterfaceType.TETHER
+        return (True, InterfaceType.TETHER)
+    return (False, None)
 
-    # Priority 3: VPN name patterns
+
+def _detect_vpn_by_name(iface_name: str) -> tuple[bool, InterfaceType | None]:
+    """Detect VPN by name patterns."""
     name_lower = iface_name.lower()
     if "vpn" in name_lower or iface_name.startswith(("tun", "tap", "ppp", "wg")):
-        return InterfaceType.VPN
+        return (True, InterfaceType.VPN)
+    return (False, None)
 
-    # Priority 4: Wireless (sysfs phy80211)
+
+def _detect_wireless(iface_name: str) -> tuple[bool, InterfaceType | None]:
+    """Detect wireless interface via sysfs phy80211."""
     if _is_wireless(iface_name):
-        return InterfaceType.WIRELESS
+        return (True, InterfaceType.WIRELESS)
+    return (False, None)
 
-    # Priority 5: Kernel link type
+
+def _detect_by_kernel_type(iface_name: str) -> tuple[bool, InterfaceType | None]:
+    """Detect type from kernel link information."""
     output = run_command(["ip", "-d", "link", "show", iface_name])
-    if output:
-        output_lower = output.lower()
-        if "wireguard" in output_lower or "tun" in output_lower or "tap" in output_lower:
-            return InterfaceType.VPN
-        if "veth" in output_lower:
-            return InterfaceType.VIRTUAL
-        if "bridge" in output_lower:
-            return InterfaceType.BRIDGE
+    if not output:
+        return (False, None)
 
-    # Priority 6: Name patterns
+    output_lower = output.lower()
+
+    # Check for VPN types
+    if "wireguard" in output_lower or "tun" in output_lower or "tap" in output_lower:
+        return (True, InterfaceType.VPN)
+
+    # Check for virtual types
+    if "veth" in output_lower:
+        return (True, InterfaceType.VIRTUAL)
+
+    # Check for bridge
+    if "bridge" in output_lower:
+        return (True, InterfaceType.BRIDGE)
+
+    return (False, None)
+
+
+def _detect_by_name_pattern(iface_name: str) -> tuple[bool, InterfaceType | None]:
+    """Detect type by interface name prefix patterns."""
     for prefix, iface_type in config.INTERFACE_TYPE_PATTERNS.items():
         if iface_name.startswith(prefix):
-            return InterfaceType(iface_type)
-
-    # Priority 7: Unknown
-    return InterfaceType.UNKNOWN
+            return (True, InterfaceType(iface_type))
+    return (False, None)
 
 
 def is_usb_tethered_device(iface: str) -> bool:

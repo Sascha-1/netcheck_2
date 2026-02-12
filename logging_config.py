@@ -7,8 +7,6 @@ Uses % formatting (PEP 391) for security.
 import logging
 from pathlib import Path
 
-import config
-
 
 class ColoredFormatter(logging.Formatter):
     """Add ANSI colors to log levels."""
