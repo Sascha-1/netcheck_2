@@ -62,32 +62,32 @@ pip install -e .
 ### Basic Usage
 ```bash
 # Display table
-python netcheck.py
+python3 netcheck.py
 
 # Verbose output
-python netcheck.py -v
+python3 netcheck.py -v
 
 # Export to JSON (stdout)
-python netcheck.py --export json
+python3 netcheck.py --export json
 
 # Export to file
-python netcheck.py --export json --output report.json
+python3 netcheck.py --export json --output report.json
 
 # Log to file
-python netcheck.py -v --log-file debug.log
+python3 netcheck.py -v --log-file debug.log
 ```
 
 ### Example Output
 ```
-====================================================================================================================================================================================================
+==============================
 Network Interface Analysis
-====================================================================================================================================================================================================
+=====================================================================================================================================================================================================================
 INTERFACE        TYPE        DEVICE                INTERNAL_IPv4    INTERNAL_IPv6              DNS_SERVER            EXTERNAL_IPv4    EXTERNAL_IPv6              ISP              COUNTRY     GATEWAY          METRIC
-====================================================================================================================================================================================================
+=====================================================================================================================================================================================================================
 lo               loopback    N/A                   127.0.0.1        ::1                        --                    --               --                         --               --          NONE             NONE
 eth0             ethernet    Intel I219-V          192.168.1.100    2001:db8::1                192.168.1.1           203.0.113.45     2001:db8::45               Comcast          US          192.168.1.1      100
 tun0             vpn         N/A                   10.8.0.2         N/A                        10.8.0.1              203.0.113.99     N/A                        ProtonVPN        CH          10.8.0.1         50
-====================================================================================================================================================================================================
+=====================================================================================================================================================================================================================
 
 Color Legend:
 GREEN  - VPN tunnel (encrypted, DNS OK)
@@ -195,7 +195,7 @@ AGPL v3 - See LICENSE file for details
 Contributions welcome! Please ensure:
 - Type safety: `mypy --strict` passes
 - Code quality: `ruff` and `pylint` pass
-- Test coverage: ≥87%
+- Test coverage: ≥90%
 - Follow design philosophy (deterministic, explicit, clear)
 
 ## Acknowledgments
