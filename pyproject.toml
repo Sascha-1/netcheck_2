@@ -22,8 +22,19 @@ disallow_subclassing_any = true
 warn_unreachable = true
 pretty = true
 show_error_codes = true
-# Use 'packages' or 'modules' instead of listing every file manually
-packages = ["netcheck", "utils", "network"] 
+# Explicitly list all files and directories to check
+files = [
+    "netcheck.py",
+    "orchestrator.py",
+    "display.py",
+    "export.py",
+    "models.py",
+    "enums.py",
+    "config.py",
+    "logging_config.py",
+    "utils/",
+    "network/"
+]
 
 [tool.ruff]
 target-version = "py312"
@@ -47,6 +58,9 @@ convention = "google" # Enforces Google-style docstrings
 jobs = 0 # Use all available CPU cores
 py-version = "3.12"
 fail-under = 10.0 # Demand perfection
+# NOTE: Pylint cannot specify default files in pyproject.toml
+# Root is NOT a package, so 'pylint .' will fail
+# Solution: Use 'make pylint' (recommended) or explicit file listing
 
 [tool.pylint.design]
 max-attributes = 10 # Tightened from 16
@@ -54,9 +68,8 @@ max-args = 5       # Tightened from 6
 max-returns = 6    # Standard limit we discussed
 
 [tool.pylint.logging]
-logging-format-style = "old" # Use {} style instead of % style ?
+logging-format-style = "old" # Use % style for logging
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["-v", "--strict-markers", "--cov=.", "--cov-report=term-missing"]
-

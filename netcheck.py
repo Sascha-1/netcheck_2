@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Netcheck - Network Interface Analysis Tool.
 
 Main entry point for the netcheck command-line tool.
