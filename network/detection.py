@@ -49,13 +49,13 @@ TypeDetector = Callable[[str], tuple[bool, InterfaceType | None]]
 
 def detect_interface_type(iface_name: str) -> InterfaceType:
     """Detect interface type using rule-based priority chain.
-    
+
     Uses rule-based pattern for maintainability:
     - Easy to add/remove/reorder detection rules
     - Each detector is self-contained
     - No complex nested if/elif chains
     - Follows Open/Closed Principle
-    
+
     Priority:
         1. Loopback (name == "lo")
         2. USB tethering (sysfs driver check)
@@ -206,15 +206,37 @@ def get_device_name(iface_name: str, iface_type: InterfaceType) -> str:
     ):
         return "N/A"
 
-    # Try USB - FIXED: Check is_usb first, IDs second
-    is_usb, _, usb_ids = _get_usb_info(iface_name)
+    # Try USB
+    is_usb, driver, usb_ids = _get_usb_info(iface_name)
     if is_usb:
-        # Try to get specific device name
+        logger.debug(
+            "[%s] USB device detected: driver=%s, ids=%s",
+            sanitize_for_log(iface_name),
+            sanitize_for_log(str(driver)),
+            sanitize_for_log(str(usb_ids)),
+        )
+
+        # Try to get specific device name if IDs available
         if usb_ids:
             name = get_usb_device_name(iface_name)
             if name:
+                logger.debug(
+                    "[%s] USB device name: %s",
+                    sanitize_for_log(iface_name),
+                    sanitize_for_log(name),
+                )
                 return name
-        # Fallback for USB devices without readable IDs
+            logger.warning(
+                "[%s] USB IDs found but lsusb lookup failed",
+                sanitize_for_log(iface_name),
+            )
+        else:
+            logger.debug(
+                "[%s] USB device without readable IDs",
+                sanitize_for_log(iface_name),
+            )
+
+        # Fallback: generic USB device name
         return "USB Device"
 
     # Try PCI
@@ -300,9 +322,59 @@ def _get_pci_ids(iface: str) -> tuple[str, str] | None:
     return None
 
 
+def _find_usb_device_ids(start_path: Path) -> tuple[str, str] | None:
+    """Walk up sysfs tree to find USB device with IDs.
+
+    USB devices have a hierarchy:
+    - USB device (has idVendor, idProduct)
+    - USB interface (what network interface points to)
+
+    We need to walk UP the tree to find the device level.
+
+    Args:
+        start_path: Starting path (usually the interface path)
+
+    Returns:
+        Tuple of (vendor, product) IDs or None if not found.
+    """
+    current = start_path
+    # Walk up max 5 levels (should find it in 1-2)
+    for _ in range(5):
+        try:
+            vendor_file = current / "idVendor"
+            product_file = current / "idProduct"
+
+            if vendor_file.exists() and product_file.exists():
+                vendor = vendor_file.read_text().strip()
+                product = product_file.read_text().strip()
+                # Validate format (4 hex digits)
+                if len(vendor) == 4 and len(product) == 4:
+                    logger.debug(
+                        "Found USB IDs at: %s (vendor=%s, product=%s)",
+                        sanitize_for_log(str(current)),
+                        sanitize_for_log(vendor),
+                        sanitize_for_log(product),
+                    )
+                    return (vendor, product)
+        except (OSError, IOError):
+            pass
+
+        # Move up one level
+        parent = current.parent
+        if parent == current:  # Reached root
+            break
+        current = parent
+
+    return None
+
+
 @lru_cache(maxsize=32)
 def _get_usb_info(iface: str) -> tuple[bool, str | None, tuple[str, str] | None]:
     """Get USB info (cached for performance).
+
+    FIXED: Walks up sysfs tree to find USB device IDs.
+    Network interfaces point to USB interface (5-8:1.0), but IDs are at
+    device level (5-8). This function now walks up to find them.
 
     Args:
         iface: Interface name
@@ -328,20 +400,8 @@ def _get_usb_info(iface: str) -> tuple[bool, str | None, tuple[str, str] | None]
     if driver_link.exists() and driver_link.is_symlink():
         driver = driver_link.resolve().name
 
-    # Get USB IDs
-    ids = None
-    try:
-        vendor_file = device_path / "idVendor"
-        product_file = device_path / "idProduct"
-
-        if vendor_file.exists() and product_file.exists():
-            vendor = vendor_file.read_text().strip()
-            product = product_file.read_text().strip()
-            # Validate format (4 hex digits)
-            if len(vendor) == 4 and len(product) == 4:
-                ids = (vendor, product)
-    except (OSError, IOError):
-        pass
+    # Get USB IDs - FIXED: Walk up tree to find device level
+    ids = _find_usb_device_ids(device_path)
 
     return (is_usb, driver, ids)
 
@@ -369,7 +429,7 @@ def get_pci_device_name(iface: str) -> str | None:
         return None
 
     # Format: "00:1f.6 Ethernet controller: Intel Corporation ..."
-    # FIXED: Find the LAST colon (after "controller:"), not the first
+    # Find the LAST colon (after "controller:"), not the first
     # Split by space, find first element with trailing colon
     parts = output.split()
     for i, part in enumerate(parts):
@@ -400,13 +460,35 @@ def get_usb_device_name(iface: str) -> str | None:
     vendor, product = usb_ids
     output = run_command(["lsusb", "-d", f"{vendor}:{product}"])
     if not output:
-        logger.warning("Failed to lookup USB device name for %s", sanitize_for_log(iface))
+        logger.warning(
+            "[%s] lsusb command failed for %s:%s",
+            sanitize_for_log(iface),
+            sanitize_for_log(vendor),
+            sanitize_for_log(product),
+        )
         return None
+
+    logger.debug(
+        "[%s] lsusb output: %s",
+        sanitize_for_log(iface),
+        sanitize_for_log(output),
+    )
 
     # Format: "Bus 001 Device 003: ID 18d1:4eeb Google Inc. Nexus/Pixel Device"
     # Extract after "ID xxxx:xxxx "
     match = re.search(r"ID\s+[0-9a-f]{4}:[0-9a-f]{4}\s+(.+)$", output, re.IGNORECASE)
     if match:
-        return match.group(1).strip()
+        device_name = match.group(1).strip()
+        logger.debug(
+            "[%s] Extracted device name: %s",
+            sanitize_for_log(iface),
+            sanitize_for_log(device_name),
+        )
+        return device_name
 
+    logger.warning(
+        "[%s] Failed to parse lsusb output (no match): %s",
+        sanitize_for_log(iface),
+        sanitize_for_log(output),
+    )
     return None
