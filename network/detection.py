@@ -179,7 +179,10 @@ def is_usb_tethered_device(iface: str) -> bool:
 
 
 def get_device_name(iface_name: str, iface_type: InterfaceType) -> str:
-    """Get hardware device name.
+    """Get hardware device name (RAW - no cleanup).
+
+    Returns raw hardware names for data integrity.
+    Cleanup happens ONLY in display layer (display.py).
 
     Algorithm:
         1. If loopback/VPN/virtual: return "N/A"
@@ -192,7 +195,7 @@ def get_device_name(iface_name: str, iface_type: InterfaceType) -> str:
         iface_type: Interface type
 
     Returns:
-        Device name (raw - cleaned in display layer) or "N/A".
+        Raw device name or "N/A" (cleanup happens in display layer).
     """
     # Virtual interfaces have no hardware
     if iface_type in (
@@ -203,12 +206,15 @@ def get_device_name(iface_name: str, iface_type: InterfaceType) -> str:
     ):
         return "N/A"
 
-    # Try USB
+    # Try USB - FIXED: Check is_usb first, IDs second
     is_usb, _, usb_ids = _get_usb_info(iface_name)
-    if is_usb and usb_ids:
-        name = get_usb_device_name(iface_name)
-        if name:
-            return name
+    if is_usb:
+        # Try to get specific device name
+        if usb_ids:
+            name = get_usb_device_name(iface_name)
+            if name:
+                return name
+        # Fallback for USB devices without readable IDs
         return "USB Device"
 
     # Try PCI
@@ -341,13 +347,16 @@ def _get_usb_info(iface: str) -> tuple[bool, str | None, tuple[str, str] | None]
 
 
 def get_pci_device_name(iface: str) -> str | None:
-    """Lookup PCI device name via lspci.
+    """Lookup PCI device name via lspci (RAW - no cleanup).
+
+    Returns raw lspci output for data integrity.
+    Cleanup happens ONLY in display layer.
 
     Args:
         iface: Interface name
 
     Returns:
-        Device name string or None if lookup fails.
+        Raw device name string or None if lookup fails.
     """
     pci_ids = _get_pci_ids(iface)
     if not pci_ids:
@@ -360,22 +369,29 @@ def get_pci_device_name(iface: str) -> str | None:
         return None
 
     # Format: "00:1f.6 Ethernet controller: Intel Corporation ..."
-    # Extract after first colon
-    parts = output.split(":", 1)
-    if len(parts) > 1:
-        return parts[1].strip()
+    # FIXED: Find the LAST colon (after "controller:"), not the first
+    # Split by space, find first element with trailing colon
+    parts = output.split()
+    for i, part in enumerate(parts):
+        if part.endswith(":"):
+            # Found "controller:" - everything after is the device name
+            return " ".join(parts[i + 1:])
 
-    return None
+    # Fallback: just return everything (shouldn't happen with valid lspci output)
+    return output
 
 
 def get_usb_device_name(iface: str) -> str | None:
-    """Lookup USB device name via lsusb.
+    """Lookup USB device name via lsusb (RAW - no cleanup).
+
+    Returns raw lsusb output for data integrity.
+    Cleanup happens ONLY in display layer.
 
     Args:
         iface: Interface name
 
     Returns:
-        Device name string or None if lookup fails.
+        Raw device name string or None if lookup fails.
     """
     _, _, usb_ids = _get_usb_info(iface)
     if not usb_ids:

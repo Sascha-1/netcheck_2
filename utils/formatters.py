@@ -1,6 +1,12 @@
-"""Text formatting utilities.
+"""Text formatting utilities for DISPLAY ONLY.
 
-Provides functions for cleaning and formatting text for display.
+All cleanup functions work on DISPLAY DATA, never on raw data.
+Raw data in models.py remains unchanged for data integrity.
+
+Shared Cleanup Architecture:
+- CORPORATE_SUFFIXES: Used by both device and ISP cleanup
+- DEVICE_TECHNICAL_TERMS: Device-specific cleanup
+- Combined for comprehensive device cleanup
 """
 
 import re
@@ -9,23 +15,37 @@ import config
 
 
 def cleanup_device_name(device_name: str) -> str:
-    """Clean device name by removing technical jargon.
+    """Clean device name for DISPLAY (raw data unchanged).
 
-    Removes:
-        - Parentheses/brackets content
-        - Corporate terms (Co., Inc., Corp.)
-        - Technical jargon (Controller, 802.11ax, etc.)
+    This is DISPLAY-LAYER ONLY. Raw data in InterfaceInfo remains unchanged.
+
+    Process:
+        1. Skip markers (N/A, --, NONE)
+        2. Remove PCI/USB prefixes (00.0, Bus 001, etc.)
+        3. Remove technical jargon
+        4. Remove corporate suffixes
+        5. Remove parentheses/brackets content
+        6. Normalize whitespace
 
     Args:
-        device_name: Raw device name from lspci/lsusb
+        device_name: Raw device name from hardware detection
 
     Returns:
-        Cleaned name or original if result would be empty.
+        Cleaned name for display or original if result would be empty.
     """
-    if device_name in ("N/A", "--", "NONE"):
+    if device_name in ("N/A", "--", "NONE", "USB Device"):
         return device_name
 
     cleaned = device_name
+
+    # Remove PCI prefix: "00:1f.6 " or "00.0 "
+    cleaned = re.sub(r"^\d+[:.]\S+\s+", "", cleaned)
+
+    # Remove USB prefix: "Bus 001 Device 003: "
+    cleaned = re.sub(r"^Bus\s+\d+\s+Device\s+\d+:\s+", "", cleaned, flags=re.IGNORECASE)
+
+    # Remove USB ID prefix: "ID 18d1:4eeb "
+    cleaned = re.sub(r"ID\s+[0-9a-f]{4}:[0-9a-f]{4}\s+", "", cleaned, flags=re.IGNORECASE)
 
     # Remove parentheses content
     cleaned = re.sub(r"\([^)]*\)", "", cleaned)
@@ -33,16 +53,18 @@ def cleanup_device_name(device_name: str) -> str:
     # Remove brackets content
     cleaned = re.sub(r"\[[^\]]*\]", "", cleaned)
 
-    # Remove cleanup terms (case-insensitive)
-    # Sort by length (longest first) to avoid partial matches
-    terms = sorted(config.DEVICE_NAME_CLEANUP, key=len, reverse=True)
+    # Build combined cleanup terms (corporate + technical)
+    all_terms = config.CORPORATE_SUFFIXES + config.DEVICE_TECHNICAL_TERMS
+
+    # Remove cleanup terms (longest first to avoid partial matches)
+    terms = sorted(all_terms, key=len, reverse=True)
     for term in terms:
         pattern = r"\b" + re.escape(term) + r"(?=\s|[.,\-]|$)"
         cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE)
 
     # Normalize whitespace
     cleaned = " ".join(cleaned.split())
-    cleaned = cleaned.strip(" ,-")
+    cleaned = cleaned.strip(" ,:.-")
 
     # Return original if cleaning produces empty
     if not cleaned:
@@ -52,24 +74,44 @@ def cleanup_device_name(device_name: str) -> str:
 
 
 def cleanup_isp_name(isp: str) -> str:
-    """Remove AS number prefix from ISP name.
+    """Clean ISP name for DISPLAY (raw data unchanged).
 
-    Example: "AS12345 Comcast" → "Comcast"
+    This is DISPLAY-LAYER ONLY. Raw data in InterfaceInfo remains unchanged.
+
+    Process:
+        1. Skip markers (--, N/A, QUERY FAILED)
+        2. Remove AS number prefix (AS12345)
+        3. Remove corporate suffixes (uses shared CORPORATE_SUFFIXES)
 
     Args:
         isp: ISP name from ipinfo.io (may include AS number)
 
     Returns:
-        ISP name without AS prefix.
+        Cleaned ISP name for display.
     """
     if isp in ("--", "N/A", "QUERY FAILED"):
         return isp
 
-    match = re.match(r"^AS\d+\s+(.+)$", isp)
-    if match:
-        return match.group(1)
+    cleaned = isp
 
-    return isp
+    # Remove AS number prefix: "AS12345 Comcast" → "Comcast"
+    cleaned = re.sub(r"^AS\d+\s+", "", cleaned)
+
+    # Remove corporate suffixes (shared with device cleanup)
+    terms = sorted(config.CORPORATE_SUFFIXES, key=len, reverse=True)
+    for term in terms:
+        pattern = r"\b" + re.escape(term) + r"(?=\s|[.,\-]|$)"
+        cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE)
+
+    # Normalize whitespace
+    cleaned = " ".join(cleaned.split())
+    cleaned = cleaned.strip(" ,:.-")
+
+    # Return original if cleaning produces empty
+    if not cleaned:
+        return isp
+
+    return cleaned
 
 
 def shorten_text(text: str, max_length: int) -> str:

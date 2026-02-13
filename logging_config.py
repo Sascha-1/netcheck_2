@@ -5,6 +5,7 @@ Uses % formatting (PEP 391) for security.
 """
 
 import logging
+import sys
 from pathlib import Path
 
 
@@ -42,6 +43,9 @@ def setup_logging(
 ) -> None:
     """Configure logging.
 
+    When verbose=True, logs go to stdout (not stderr) for redirect compatibility.
+    This allows `./netcheck.py -v > output.log` to capture both logs and table.
+
     Args:
         verbose: Enable DEBUG level (default: WARNING+ only)
         log_file: Optional file output path
@@ -50,8 +54,9 @@ def setup_logging(
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG if verbose else logging.WARNING)
 
-    # Console handler
-    console_handler = logging.StreamHandler()
+    # Console handler - use stdout when verbose for redirect compatibility
+    # Non-verbose uses stderr (Unix convention: errors/warnings to stderr)
+    console_handler = logging.StreamHandler(sys.stdout if verbose else sys.stderr)
     console_handler.setLevel(logging.DEBUG if verbose else logging.WARNING)
 
     if use_colors:

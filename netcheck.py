@@ -128,7 +128,14 @@ def main() -> None:
             else:
                 print(json_data)
         else:
+            # Display table to stdout
             format_output(interfaces)
+
+            # If log file and verbose, also write table to log file
+            if args.log_file and args.verbose:
+                with args.log_file.open('a') as f:
+                    f.write("\n")  # Separator between logs and table
+                    format_output(interfaces, file=f)
 
         sys.exit(ExitCode.SUCCESS)
 

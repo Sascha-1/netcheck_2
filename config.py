@@ -19,9 +19,9 @@ RETRY_BACKOFF_FACTOR: float = 1.0
 # These are used to distinguish between "leaking to ISP" (bad) and
 # "using public DNS" (suboptimal but not leaking to ISP).
 # This helps users understand their privacy posture:
-#   - ISP DNS (192.168.1.1): ISP sees all DNS queries → "LEAK" status
-#   - Public DNS (1.1.1.1): Third-party sees queries, NOT your ISP → "PUBLIC" status
-#   - VPN DNS (ProtonVPN): VPN provider sees queries (trusted) → "OK" status
+#   - ISP DNS (192.168.1.1): ISP sees all DNS queries -> "LEAK" status
+#   - Public DNS (1.1.1.1): Third-party sees queries, NOT your ISP -> "PUBLIC" status
+#   - VPN DNS (ProtonVPN): VPN provider sees queries (trusted) -> "OK" status
 PUBLIC_DNS_SERVERS: set[str] = {
     # Cloudflare
     "1.1.1.1",
@@ -90,17 +90,26 @@ COMMON_VPN_PORTS: dict[int, str] = {
     80: "OpenVPN (TCP alternate)",
 }
 
-# Device Name Cleanup Terms
-# These terms are removed from hardware device names to make them more readable.
-# Sorted by length (longest first) during cleanup to avoid partial matches.
-DEVICE_NAME_CLEANUP: list[str] = [
+# Display Cleanup Configuration
+# These lists define what gets cleaned from hardware/ISP names in DISPLAY LAYER ONLY.
+# Raw data remains unchanged for data integrity.
+
+# Corporate suffixes - SHARED between device and ISP cleanup
+# Used to remove company legal designations from display names.
+CORPORATE_SUFFIXES: list[str] = [
     "co.",
     "company",
     "corp.",
     "corporation",
     "inc.",
+    "incorporated",
     "ltd.",
     "limited",
+]
+
+# Device-specific technical terms - ONLY used for device cleanup
+# Used to remove hardware jargon from device names.
+DEVICE_TECHNICAL_TERMS: list[str] = [
     "802.11ac",
     "802.11ax",
     "802.11n",

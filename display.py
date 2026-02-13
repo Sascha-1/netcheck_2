@@ -4,7 +4,8 @@ Formats network interface data as a color-coded table.
 Uses rule-based pattern for color selection (maintainable, extensible).
 """
 
-from typing import Callable
+import sys
+from typing import Callable, TextIO
 
 import config
 from config import Color
@@ -13,8 +14,8 @@ from models import InterfaceInfo
 from utils import cleanup_device_name, cleanup_isp_name, shorten_text
 
 
-def format_output(interfaces: list[InterfaceInfo]) -> None:
-    """Format and print table to stdout.
+def format_output(interfaces: list[InterfaceInfo], file: TextIO | None = None) -> None:
+    """Format and print table to specified file or stdout.
 
     Process:
         1. Print header
@@ -27,22 +28,26 @@ def format_output(interfaces: list[InterfaceInfo]) -> None:
 
     Args:
         interfaces: List of InterfaceInfo objects to display
+        file: Optional file handle (default: sys.stdout)
     """
+    if file is None:
+        file = sys.stdout
+
     # Print header
-    print("=" * 228)
-    print("Network Interface Analysis")
-    print("=" * 228)
+    print("=" * 228, file=file)
+    print("Network Interface Analysis", file=file)
+    print("=" * 228, file=file)
 
     # Print column headers
     headers = []
     for name, width in config.TABLE_COLUMNS:
         headers.append(name.ljust(width))
-    print(config.COLUMN_SEPARATOR.join(headers))
-    print("=" * 228)
+    print(config.COLUMN_SEPARATOR.join(headers), file=file)
+    print("=" * 228, file=file)
 
     # Print each interface
     for interface in interfaces:
-        # Clean names
+        # Clean names (DISPLAY LAYER ONLY - raw data unchanged)
         device = cleanup_device_name(interface.device)
         isp = cleanup_isp_name(interface.egress.isp)
 
@@ -74,27 +79,37 @@ def format_output(interfaces: list[InterfaceInfo]) -> None:
         # Print with color
         row = config.COLUMN_SEPARATOR.join(row_parts)
         if color:
-            print(f"{color}{row}{Color.RESET}")
+            print(f"{color}{row}{Color.RESET}", file=file)
         else:
-            print(row)
+            print(row, file=file)
 
     # Print footer
-    print("=" * 228)
-    print("\nColor Legend:")
-    print(f"{Color.GREEN}GREEN{Color.RESET}  - VPN tunnel (encrypted, DNS OK)")
-    print(f"{Color.CYAN}CYAN{Color.RESET}   - Physical interface carrying VPN")
-    print(f"{Color.RED}RED{Color.RESET}    - Direct internet (unencrypted)")
-    print(f"{Color.YELLOW}YELLOW{Color.RESET} - DNS leak, public DNS, or warning")
-    print("\nDNS Status Meanings:")
-    print("  OK     - Using VPN DNS (best privacy - VPN provider sees queries)")
+    print("=" * 228, file=file)
+    print("\nColor Legend:", file=file)
+    print(f"{Color.GREEN}GREEN{Color.RESET}  - VPN tunnel (encrypted, DNS OK)", file=file)
+    print(f"{Color.CYAN}CYAN{Color.RESET}   - Physical interface carrying VPN", file=file)
+    print(f"{Color.RED}RED{Color.RESET}    - Direct internet (unencrypted)", file=file)
     print(
-        "  PUBLIC - Using public DNS (Cloudflare/Google/Quad9 - not leaking to ISP, but suboptimal)"
+        f"{Color.YELLOW}YELLOW{Color.RESET} - DNS leak, public DNS, or warning",
+        file=file,
+    )
+    print("\nDNS Status Meanings:", file=file)
+    print("  OK     - Using VPN DNS (best privacy - VPN provider sees queries)", file=file)
+    print(
+        "  PUBLIC - Using public DNS (Cloudflare/Google/Quad9 - not leaking to ISP, "
+        "but suboptimal)",
+        file=file,
     )
     print(
-        "  LEAK   - Using ISP DNS (security issue - ISP sees all queries, defeats VPN privacy)"
+        "  LEAK   - Using ISP DNS (security issue - ISP sees all queries, "
+        "defeats VPN privacy)",
+        file=file,
     )
-    print("  WARN   - Using unknown DNS (investigate further)")
-    print("  --     - Not applicable (no VPN active or no DNS configured)\n")
+    print("  WARN   - Using unknown DNS (investigate further)", file=file)
+    print(
+        "  --     - Not applicable (no VPN active or no DNS configured)\n",
+        file=file,
+    )
 
 
 # Type alias for color selection predicate
@@ -111,13 +126,13 @@ def _get_row_color(interface: InterfaceInfo) -> str:
     - Follows Open/Closed Principle
     
     Priority (first match wins):
-        1. DNS leak (LEAK) → YELLOW
-        2. DNS warning → YELLOW
-        3. Public DNS → YELLOW
-        4. VPN with OK DNS → GREEN
-        5. VPN with external IP → GREEN
-        6. Carries VPN traffic → CYAN
-        7. Direct internet → RED
+        1. DNS leak (LEAK) -> YELLOW
+        2. DNS warning -> YELLOW
+        3. Public DNS -> YELLOW
+        4. VPN with OK DNS -> GREEN
+        5. VPN with external IP -> GREEN
+        6. Carries VPN traffic -> CYAN
+        7. Direct internet -> RED
         8. No color (default)
 
     Args:
