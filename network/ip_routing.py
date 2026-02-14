@@ -104,13 +104,19 @@ def get_route_info(iface_name: str) -> tuple[str, str]:
 
     Command: ip route show dev <interface>
 
-    CRITICAL: Metric handling
-        - If metric explicit: return number
-        - If metric not shown: return "DEFAULT"
-        - NEVER guess what "DEFAULT" means numerically
+    DESIGN DECISION - Why we return "DEFAULT" instead of querying effective metric:
 
-    TODO: Implement effective metric querying via 'ip route get <destination>'
-    for more accurate metric values when not explicitly shown in route table.
+    When metric is not explicitly shown in routing table, we return "DEFAULT"
+    rather than querying the effective value via 'ip route get <destination>'.
+
+    Rationale:
+        1. Honesty: "DEFAULT" accurately means "kernel's default, we don't know"
+        2. Design principle: Never guess or assume values
+        3. Ambiguity: Which destination to query? Results may vary.
+        4. Sorting works: "DEFAULT" sorts after explicit metrics (see metric_sort.py)
+        5. User clarity: Explicit metric (98) vs DEFAULT is clear enough
+
+    If you need the effective metric, use: ip route get 8.8.8.8 | grep metric
 
     Args:
         iface_name: Interface name
@@ -132,13 +138,13 @@ def get_route_info(iface_name: str) -> tuple[str, str]:
         gateway_match = re.search(r"via\s+([0-9.]+)", line)
         gateway = gateway_match.group(1) if gateway_match else "NONE"
 
-        # Extract metric (CRITICAL: never guess)
+        # Extract metric (explicit only - never guess)
         metric_match = re.search(r"metric\s+(\d+)", line)
         if metric_match:
             metric = metric_match.group(1)
         else:
-            # Metric not explicitly shown
-            # v1.0: Accept we don't know, return "DEFAULT" honestly
+            # Metric not explicitly shown - return "DEFAULT" honestly
+            # See design rationale in docstring above
             metric = "DEFAULT"
 
         logger.debug(

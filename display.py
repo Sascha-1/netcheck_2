@@ -8,7 +8,7 @@ import sys
 from typing import Callable, TextIO
 
 import config
-from config import Color
+from colors import Color
 from enums import DnsLeakStatus, InterfaceType
 from models import InterfaceInfo
 from utils import cleanup_device_name, cleanup_isp_name, shorten_text
@@ -85,29 +85,17 @@ def format_output(interfaces: list[InterfaceInfo], file: TextIO | None = None) -
 
     # Print footer
     print("=" * 228, file=file)
-    print("\nColor Legend:", file=file)
-    print(f"{Color.GREEN}GREEN{Color.RESET}  - VPN tunnel (encrypted, DNS OK)", file=file)
-    print(f"{Color.CYAN}CYAN{Color.RESET}   - Physical interface carrying VPN", file=file)
-    print(f"{Color.RED}RED{Color.RESET}    - Direct internet (unencrypted)", file=file)
+    print("\nLegend:", file=file)
+    print(f"{Color.GREEN}GREEN{Color.RESET}   - VPN tunnel (encrypted, DNS OK)", file=file)
+    print(f"{Color.CYAN}CYAN{Color.RESET}    - Physical interface carrying VPN traffic", file=file)
+    print(f"{Color.RED}RED{Color.RESET}     - Direct internet (unencrypted)", file=file)
     print(
-        f"{Color.YELLOW}YELLOW{Color.RESET} - DNS leak, public DNS, or warning",
-        file=file,
-    )
-    print("\nDNS Status Meanings:", file=file)
-    print("  OK     - Using VPN DNS (best privacy - VPN provider sees queries)", file=file)
-    print(
-        "  PUBLIC - Using public DNS (Cloudflare/Google/Quad9 - not leaking to ISP, "
-        "but suboptimal)",
+        f"{Color.MAGENTA}MAGENTA{Color.RESET} - DNS LEAK (ISP sees all queries - fix immediately!)",
         file=file,
     )
     print(
-        "  LEAK   - Using ISP DNS (security issue - ISP sees all queries, "
-        "defeats VPN privacy)",
-        file=file,
-    )
-    print("  WARN   - Using unknown DNS (investigate further)", file=file)
-    print(
-        "  --     - Not applicable (no VPN active or no DNS configured)\n",
+        f"{Color.YELLOW}YELLOW{Color.RESET}  - "
+        "DNS warning (using public DNS or unknown provider)\n",
         file=file,
     )
 
@@ -126,9 +114,9 @@ def _get_row_color(interface: InterfaceInfo) -> str:
     - Follows Open/Closed Principle
     
     Priority (first match wins):
-        1. DNS leak (LEAK) -> YELLOW
-        2. DNS warning -> YELLOW
-        3. Public DNS -> YELLOW
+        1. DNS leak (LEAK) -> MAGENTA (CRITICAL)
+        2. DNS warning (WARN) -> YELLOW
+        3. Public DNS (PUBLIC) -> YELLOW
         4. VPN with OK DNS -> GREEN
         5. VPN with external IP -> GREEN
         6. Carries VPN traffic -> CYAN
@@ -144,17 +132,17 @@ def _get_row_color(interface: InterfaceInfo) -> str:
     # Define rules as (predicate, color) tuples
     # Rules are evaluated in order - first match wins
     rules: list[tuple[ColorPredicate, str]] = [
-        # Priority 1: DNS leak (security issue)
+        # Priority 1: DNS leak (CRITICAL - ISP sees all queries)
         (
             lambda i: i.dns.leak_status == DnsLeakStatus.LEAK,
-            Color.YELLOW,
+            Color.MAGENTA,
         ),
-        # Priority 2: DNS warning
+        # Priority 2: DNS warning (unknown DNS)
         (
             lambda i: i.dns.leak_status == DnsLeakStatus.WARN,
             Color.YELLOW,
         ),
-        # Priority 3: Public DNS (suboptimal)
+        # Priority 3: Public DNS (suboptimal but not leaking to ISP)
         (
             lambda i: i.dns.leak_status == DnsLeakStatus.PUBLIC,
             Color.YELLOW,

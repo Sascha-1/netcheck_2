@@ -24,7 +24,7 @@ mypy:
 
 pylint:
 	@echo "Running pylint..."
-	@pylint netcheck.py orchestrator.py display.py export.py models.py enums.py config.py logging_config.py network/ utils/ || (echo "Pylint found issues!" && exit 1)
+	@pylint netcheck.py orchestrator.py display.py export.py models.py enums.py config.py colors.py logging_config.py network/ utils/ || (echo "Pylint found issues!" && exit 1)
 	@echo "✓ Pylint passed!"
 
 ruff:

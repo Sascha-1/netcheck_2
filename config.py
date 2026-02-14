@@ -4,7 +4,7 @@ All configurable values stored here for easy customization.
 Single source of truth for all constants and configuration.
 """
 
-from enum import IntEnum, StrEnum
+from enum import IntEnum
 
 # API Configuration
 IPINFO_URL: str = "https://ipinfo.io/json"
@@ -165,24 +165,6 @@ class ExitCode(IntEnum):
     MISSING_DEPENDENCIES = 2
     PERMISSION_DENIED = 3  # Unused in v1.0
     INVALID_ARGUMENTS = 4
-
-
-# ANSI Color Codes (StrEnum for type safety and enum benefits)
-class Color(StrEnum):
-    """ANSI color codes (always enabled).
-    
-    Using StrEnum provides:
-    - Type safety
-    - IDE autocomplete
-    - Can be used directly as strings
-    - Standard Python pattern for string constants
-    """
-
-    GREEN = "\033[92m"
-    CYAN = "\033[96m"
-    RED = "\033[91m"
-    YELLOW = "\033[93m"
-    RESET = "\033[0m"
 
 
 # Tool Metadata
