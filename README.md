@@ -82,30 +82,24 @@ python3 netcheck.py -v --log-file debug.log
 
 ### Example Output
 ```
-==============================
+====================================================================================================================================================================================================================================
 Network Interface Analysis
-=====================================================================================================================================================================================================================
-INTERFACE        TYPE        DEVICE                INTERNAL_IPv4    INTERNAL_IPv6              DNS_SERVER            EXTERNAL_IPv4    EXTERNAL_IPv6              ISP              COUNTRY     GATEWAY          METRIC
-=====================================================================================================================================================================================================================
-lo               loopback    N/A                   127.0.0.1        ::1                        --                    --               --                         --               --          NONE             NONE
-eth0             ethernet    Intel I219-V          192.168.1.100    2001:db8::1                192.168.1.1           203.0.113.45     2001:db8::45               Comcast          US          192.168.1.1      100
-wwp195s0f3u4     cellular    Quectel EM05-G        192.168.8.100    N/A                        192.168.8.1           203.0.113.50     N/A                        T-Mobile         US          192.168.8.1      200
-enxb2707db29505  tether      Google Pixel 9a       192.168.42.129   N/A                        192.168.42.129        203.0.113.55     N/A                        Verizon          US          192.168.42.129   300
-tun0             vpn         N/A                   10.8.0.2         N/A                        10.8.0.1              203.0.113.99     N/A                        ProtonVPN        CH          10.8.0.1         50
-=====================================================================================================================================================================================================================
+====================================================================================================================================================================================================================================
+INTERFACE         TYPE         DEVICE                 INTERNAL_IPv4     INTERNAL_IPv6               DNS_SERVER             EXTERNAL_IPv4     EXTERNAL_IPv6               ISP               COUNTRY      GATEWAY           METRIC
+====================================================================================================================================================================================================================================
+lo                loopback     N/A                    127.0.0.1         N/A                         --                     --                --                          --                --           NONE              NONE
+eth0              ethernet     Intel I219-V           192.168.1.100     2001:db8::1                 192.168.1.1            203.0.113.45      2001:db8::45                Comcast           US           192.168.1.1       100
+wwp195s0f3u4      cellular     Quectel EM05-G         192.168.8.100     N/A                         192.168.8.1            203.0.113.50      N/A                         T-Mobile          US           192.168.8.1       200
+enxb2707db29505   tether       Google Pixel 9a        192.168.42.129    N/A                         192.168.42.129         203.0.113.55      N/A                         Verizon           US           192.168.42.129    300
+tun0              vpn          N/A                    10.8.0.2          N/A                         10.8.0.1               203.0.113.99      N/A                         ProtonVPN         CH           10.8.0.1          50
+====================================================================================================================================================================================================================================
 
-Color Legend:
-GREEN  - VPN tunnel (encrypted, DNS OK)
-CYAN   - Physical interface carrying VPN
-RED    - Direct internet (unencrypted)
-YELLOW - DNS leak, public DNS, or warning
-
-DNS Status Meanings:
-  OK     - Using VPN DNS (best privacy - VPN provider sees queries)
-  PUBLIC - Using public DNS (Cloudflare/Google/Quad9 - not leaking to ISP, but suboptimal)
-  LEAK   - Using ISP DNS (security issue - ISP sees all queries, defeats VPN privacy)
-  WARN   - Using unknown DNS (investigate further)
-  --     - Not applicable (no VPN active or no DNS configured)
+Legend:
+GREEN   - VPN tunnel (encrypted, DNS OK)
+CYAN    - Physical interface carrying VPN traffic
+RED     - Direct internet (unencrypted)
+MAGENTA - DNS LEAK (ISP sees all queries - fix immediately!)
+YELLOW  - DNS warning (using public DNS or unknown provider)
 ```
 
 ## Interface Types
@@ -148,7 +142,8 @@ The table uses colors to indicate security status:
 - **GREEN**: VPN tunnel with proper DNS configuration (encrypted, privacy protected)
 - **CYAN**: Physical interface carrying VPN traffic (underlay)
 - **RED**: Direct internet connection (unencrypted, no VPN)
-- **YELLOW**: DNS leak detected, using public DNS, or configuration warning
+- **MAGENTA**: DNS leak detected - ISP sees all queries (critical security issue)
+- **YELLOW**: DNS warning - using public DNS or unknown provider
 
 ## DNS Leak Detection
 
@@ -156,19 +151,18 @@ Netcheck uses **deterministic, configuration-based** DNS leak detection:
 
 1. **Not timing-based**: Unlike other tools, we don't rely on DNS query timing
 2. **Configuration analysis**: Compares configured DNS servers against VPN/ISP/Public DNS
-3. **Clear status indicators**:
-   - `OK`: Using VPN DNS (best privacy)
-   - `PUBLIC`: Using Cloudflare/Google/Quad9 (not leaking to ISP, but suboptimal)
-   - `LEAK`: Using ISP DNS (critical security issue)
-   - `WARN`: Using unknown DNS servers (investigate)
-   - `--`: Not applicable (no VPN or no DNS configured)
+3. **Four possible states**:
+   - **OK** (GREEN): Using VPN DNS - best privacy, VPN provider sees queries
+   - **PUBLIC** (YELLOW): Using Cloudflare/Google/Quad9 - not leaking to ISP, but suboptimal
+   - **LEAK** (MAGENTA): Using ISP DNS - critical security issue, ISP sees all queries
+   - **WARN** (YELLOW): Using unknown DNS servers - investigate further
 
-### Why List Public DNS Providers?
+### Why Distinguish Public DNS from ISP DNS?
 
-To give users actionable information:
-- **ISP DNS**: Your ISP sees all queries → Critical leak
-- **Public DNS**: Third-party sees queries, but NOT your ISP → Suboptimal but not leaking
-- **VPN DNS**: VPN provider sees queries (trusted) → Ideal
+To give users actionable information about their privacy posture:
+- **ISP DNS**: Your ISP sees all queries → Critical leak, defeats VPN privacy
+- **Public DNS**: Third-party (Cloudflare/Google) sees queries, but NOT your ISP → Suboptimal but not leaking to ISP
+- **VPN DNS**: VPN provider sees queries (trusted relationship) → Ideal for privacy
 
 ## VPN Detection
 
@@ -236,6 +230,4 @@ Contributions welcome! Please ensure:
 - Test coverage: ≥90%
 - Follow design philosophy (deterministic, explicit, clear)
 
-## Acknowledgments
 
-Built with a focus on deterministic behavior and user privacy.
