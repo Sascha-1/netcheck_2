@@ -7,6 +7,7 @@ Shared Cleanup Architecture:
 - CORPORATE_SUFFIXES: Used by both device and ISP cleanup
 - DEVICE_TECHNICAL_TERMS: Device-specific cleanup
 - Combined for comprehensive device cleanup
+- All matching is CASE-INSENSITIVE
 """
 
 import re
@@ -22,10 +23,15 @@ def cleanup_device_name(device_name: str) -> str:
     Process:
         1. Skip markers (N/A, --, NONE)
         2. Remove PCI/USB prefixes (00.0, Bus 001, etc.)
-        3. Remove technical jargon
-        4. Remove corporate suffixes
+        3. Remove technical jargon (CASE-INSENSITIVE)
+        4. Remove corporate suffixes (CASE-INSENSITIVE)
         5. Remove parentheses/brackets content
         6. Normalize whitespace
+
+    Examples:
+        "Intel Corporation Ethernet Controller I225-V" → "Intel I225-V"
+        "Realtek CORP. RTL8111" → "Realtek RTL8111"
+        "Broadcom Inc. BCM4360" → "Broadcom BCM4360"
 
     Args:
         device_name: Raw device name from hardware detection
@@ -56,10 +62,15 @@ def cleanup_device_name(device_name: str) -> str:
     # Build combined cleanup terms (corporate + technical)
     all_terms = config.CORPORATE_SUFFIXES + config.DEVICE_TECHNICAL_TERMS
 
-    # Remove cleanup terms (longest first to avoid partial matches)
+    # Remove cleanup terms (CASE-INSENSITIVE)
+    # Sort by length (longest first to avoid partial matches)
+    # Example: "Corporation" before "Corp" to match the longer form first
     terms = sorted(all_terms, key=len, reverse=True)
     for term in terms:
+        # Pattern matches word boundaries to avoid partial word matches
+        # Example: "Inc." matches "Broadcom Inc." but not "Incendiary"
         pattern = r"\b" + re.escape(term) + r"(?=\s|[.,\-]|$)"
+        # CASE-INSENSITIVE: "Corp", "corp", "CORP" all match
         cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE)
 
     # Normalize whitespace
@@ -81,7 +92,12 @@ def cleanup_isp_name(isp: str) -> str:
     Process:
         1. Skip markers (--, N/A, QUERY FAILED)
         2. Remove AS number prefix (AS12345)
-        3. Remove corporate suffixes (uses shared CORPORATE_SUFFIXES)
+        3. Remove corporate suffixes (CASE-INSENSITIVE)
+
+    Examples:
+        "AS12345 Comcast Corporation" → "Comcast"
+        "AS701 Verizon Inc." → "Verizon"
+        "Google LLC" → "Google"
 
     Args:
         isp: ISP name from ipinfo.io (may include AS number)
@@ -97,10 +113,12 @@ def cleanup_isp_name(isp: str) -> str:
     # Remove AS number prefix: "AS12345 Comcast" → "Comcast"
     cleaned = re.sub(r"^AS\d+\s+", "", cleaned)
 
-    # Remove corporate suffixes (shared with device cleanup)
+    # Remove corporate suffixes (CASE-INSENSITIVE)
+    # Uses same list as device cleanup for consistency
     terms = sorted(config.CORPORATE_SUFFIXES, key=len, reverse=True)
     for term in terms:
         pattern = r"\b" + re.escape(term) + r"(?=\s|[.,\-]|$)"
+        # CASE-INSENSITIVE: "Corp", "corp", "CORP" all match
         cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE)
 
     # Normalize whitespace

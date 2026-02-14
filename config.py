@@ -93,6 +93,9 @@ COMMON_VPN_PORTS: dict[int, str] = {
 # Display Cleanup Configuration
 # These lists define what gets cleaned from hardware/ISP names in DISPLAY LAYER ONLY.
 # Raw data remains unchanged for data integrity.
+#
+# IMPORTANT: All terms are matched CASE-INSENSITIVELY.
+# Store as lowercase for consistency, but "Corp" will match "corp", "CORP", etc.
 
 # Corporate suffixes - SHARED between device and ISP cleanup
 # Used to remove company legal designations from display names.
@@ -105,8 +108,6 @@ CORPORATE_SUFFIXES: list[str] = [
     "incorporated",
     "ltd.",
     "limited",
-    "solutions",
-    "technologies",
 ]
 
 # Device-specific technical terms - ONLY used for device cleanup
