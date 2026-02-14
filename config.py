@@ -105,6 +105,8 @@ CORPORATE_SUFFIXES: list[str] = [
     "incorporated",
     "ltd.",
     "limited",
+    "solutions",
+    "technologies",
 ]
 
 # Device-specific technical terms - ONLY used for device cleanup
