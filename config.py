@@ -100,22 +100,43 @@ COMMON_VPN_PORTS: dict[int, str] = {
 # Corporate suffixes - SHARED between device and ISP cleanup
 # Used to remove company legal designations from display names.
 CORPORATE_SUFFIXES: list[str] = [
+    # With periods
     "co.",
-    "company",
     "corp.",
-    "corporation",
     "inc.",
-    "incorporated",
     "ltd.",
+    # Without periods (for "Inc" vs "Inc.")
+    "co",
+    "corp",
+    "inc",
+    "ltd",
+    # Full words
+    "company",
+    "corporation",
+    "incorporated",
     "limited",
+    # Common additions
+    "llc",
+    "l.l.c.",
+    "plc",
+    "p.l.c.",
+    "gmbh",
+    "ag",
+    "s.a.",
+    "n.v.",
 ]
 
 # Device-specific technical terms - ONLY used for device cleanup
 # Used to remove hardware jargon from device names.
 DEVICE_TECHNICAL_TERMS: list[str] = [
+    # Wireless standards
     "802.11ac",
     "802.11ax",
     "802.11n",
+    "802.11g",
+    "802.11a",
+    "802.11b",
+    # Common hardware terms
     "controller",
     "adapter",
     "ethernet",
@@ -131,6 +152,15 @@ DEVICE_TECHNICAL_TERMS: list[str] = [
     "pcie",
     "rev",
     "revision",
+    # Technology/solutions terms
+    "technologies",
+    "technology",
+    "tech",
+    "solutions",
+    "systems",
+    "devices",
+    "communications",
+    "comms",
 ]
 
 # Table Configuration

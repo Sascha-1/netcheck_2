@@ -26,12 +26,13 @@ def cleanup_device_name(device_name: str) -> str:
         3. Remove technical jargon (CASE-INSENSITIVE)
         4. Remove corporate suffixes (CASE-INSENSITIVE)
         5. Remove parentheses/brackets content
-        6. Normalize whitespace
+        6. Clean up stray punctuation
+        7. Normalize whitespace
 
     Examples:
         "Intel Corporation Ethernet Controller I225-V" → "Intel I225-V"
-        "Realtek CORP. RTL8111" → "Realtek RTL8111"
-        "Broadcom Inc. BCM4360" → "Broadcom BCM4360"
+        "Qualcomm Technologies, Inc QCNFA765" → "Qualcomm QCNFA765"
+        "Quectel Wireless Solutions Co., Ltd." → "Quectel"
 
     Args:
         device_name: Raw device name from hardware detection
@@ -64,14 +65,21 @@ def cleanup_device_name(device_name: str) -> str:
 
     # Remove cleanup terms (CASE-INSENSITIVE)
     # Sort by length (longest first to avoid partial matches)
-    # Example: "Corporation" before "Corp" to match the longer form first
     terms = sorted(all_terms, key=len, reverse=True)
     for term in terms:
         # Pattern matches word boundaries to avoid partial word matches
-        # Example: "Inc." matches "Broadcom Inc." but not "Incendiary"
-        pattern = r"\b" + re.escape(term) + r"(?=\s|[.,\-]|$)"
-        # CASE-INSENSITIVE: "Corp", "corp", "CORP" all match
+        # Now also handles colons: "Network controller:" → "Network "
+        pattern = r"\b" + re.escape(term) + r"(?=\s|[.,:\-]|$)"
         cleaned = re.sub(pattern, "", cleaned, flags=re.IGNORECASE)
+
+    # Clean up stray punctuation left by removals
+    cleaned = re.sub(r"\s*,\s*,\s*", ", ", cleaned)  # Multiple commas
+    cleaned = re.sub(r"\s*,\s*$", "", cleaned)  # Trailing comma
+    cleaned = re.sub(r"\s*,\s+", " ", cleaned)  # Stray commas with space after
+    cleaned = re.sub(r":\s*", " ", cleaned)  # Stray colons
+
+    # Remove duplicate consecutive words (e.g., "Quectel Quectel" → "Quectel")
+    cleaned = re.sub(r"\b(\w+)\s+\1\b", r"\1", cleaned, flags=re.IGNORECASE)
 
     # Normalize whitespace
     cleaned = " ".join(cleaned.split())
