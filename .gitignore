@@ -58,6 +58,7 @@ debug.log
 report.json
 docs/
 
-# Sascha's backups
+# Sascha's additions
 *.bak
+scripts/
 
