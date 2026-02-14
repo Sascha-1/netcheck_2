@@ -58,12 +58,13 @@ def detect_interface_type(iface_name: str) -> InterfaceType:
 
     Priority:
         1. Loopback (name == "lo")
-        2. USB tethering (sysfs driver check)
-        3. VPN name (vpn/tun/tap/ppp/wg)
-        4. Wireless (sysfs phy80211)
-        5. Kernel type (ip -d link show)
-        6. Name patterns
-        7. UNKNOWN (default)
+        2. Cellular modem (ModemManager recognition)
+        3. USB tethering (sysfs driver check, not in ModemManager)
+        4. VPN name (vpn/tun/tap/ppp/wg)
+        5. Wireless (sysfs phy80211)
+        6. Kernel type (ip -d link show)
+        7. Name patterns
+        8. UNKNOWN (default)
 
     Args:
         iface_name: Interface name
@@ -75,6 +76,7 @@ def detect_interface_type(iface_name: str) -> InterfaceType:
     # Each returns (matched: bool, type: InterfaceType | None)
     detectors: list[TypeDetector] = [
         _detect_loopback,
+        _detect_cellular_modem,  # NEW: Check ModemManager BEFORE tethering
         _detect_usb_tether,
         _detect_vpn_by_name,
         _detect_wireless,
@@ -103,8 +105,50 @@ def _detect_loopback(iface_name: str) -> tuple[bool, InterfaceType | None]:
     return (False, None)
 
 
+def _detect_cellular_modem(iface_name: str) -> tuple[bool, InterfaceType | None]:
+    """Detect cellular modem via ModemManager.
+
+    This is the deterministic way to distinguish cellular modems from
+    USB phone tethering. ModemManager maintains a database of supported
+    modems and only manages actual cellular modems, not phones.
+
+    Algorithm:
+        1. Get all ModemManager-managed modems
+        2. Get device path for this interface
+        3. Check if interface device path matches any modem
+
+    Returns:
+        (True, CELLULAR) if ModemManager recognizes this as a modem
+        (False, None) otherwise
+    """
+    # Get device path for this interface
+    device_path = _get_device_path(iface_name)
+    if not device_path:
+        return (False, None)
+
+    # Get all modem device paths from ModemManager
+    modem_paths = _get_modemmanager_device_paths()
+
+    # Check if this interface's device is managed by ModemManager
+    device_path_str = str(device_path)
+    for modem_path in modem_paths:
+        # Match if modem path is a parent of device path or exact match
+        if device_path_str.startswith(modem_path) or modem_path.startswith(device_path_str):
+            logger.info(
+                "[%s] Recognized as cellular modem by ModemManager",
+                sanitize_for_log(iface_name)
+            )
+            return (True, InterfaceType.CELLULAR)
+
+    return (False, None)
+
+
 def _detect_usb_tether(iface_name: str) -> tuple[bool, InterfaceType | None]:
-    """Detect USB tethered device."""
+    """Detect USB tethered device (phone sharing internet).
+
+    This runs AFTER cellular modem detection, so if we get here and
+    find USB tether drivers, it's actually phone tethering, not a modem.
+    """
     if is_usb_tethered_device(iface_name):
         return (True, InterfaceType.TETHER)
     return (False, None)
@@ -154,6 +198,70 @@ def _detect_by_name_pattern(iface_name: str) -> tuple[bool, InterfaceType | None
         if iface_name.startswith(prefix):
             return (True, InterfaceType(iface_type))
     return (False, None)
+
+
+# ModemManager Integration
+
+
+@lru_cache(maxsize=1)
+def _get_modemmanager_device_paths() -> list[str]:
+    """Query ModemManager for all managed modem device paths.
+
+    Uses mmcli to query ModemManager D-Bus interface.
+    Cached since modem list doesn't change during a single run.
+
+    Algorithm:
+        1. List all modems: mmcli -L
+        2. For each modem index, query device path: mmcli -m <index> -K
+        3. Extract modem.generic.device value
+
+    Returns:
+        List of device paths (e.g., ['/sys/devices/pci0000:00/...'])
+    """
+    # Step 1: List all modems
+    output = run_command(["mmcli", "-L"])
+    if not output:
+        logger.debug("ModemManager returned no modems")
+        return []
+
+    # Parse modem indices from output
+    # Format: "/org/freedesktop/ModemManager1/Modem/0 [Quectel] EM05-G"
+    modem_indices = []
+    for line in output.split("\n"):
+        match = re.search(r"/Modem/(\d+)", line)
+        if match:
+            modem_indices.append(match.group(1))
+
+    if not modem_indices:
+        logger.debug("No modem indices found in ModemManager output")
+        return []
+
+    logger.debug("Found %d modem(s) in ModemManager", len(modem_indices))
+
+    # Step 2: Query each modem's device path
+    device_paths = []
+    for index in modem_indices:
+        # Query modem details in key-value format
+        output = run_command(["mmcli", "-m", index, "-K"])
+        if not output:
+            continue
+
+        # Extract device path
+        # Format: "modem.generic.device : /sys/devices/pci0000:00/..."
+        for line in output.split("\n"):
+            if "modem.generic.device" in line:
+                match = re.search(r":\s*(.+)$", line)
+                if match:
+                    device_path = match.group(1).strip()
+                    device_paths.append(device_path)
+                    logger.debug(
+                        "ModemManager modem %s device path: %s",
+                        index,
+                        sanitize_for_log(device_path)
+                    )
+                    break
+
+    return device_paths
 
 
 def is_usb_tethered_device(iface: str) -> bool:

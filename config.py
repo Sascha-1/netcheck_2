@@ -48,6 +48,7 @@ REQUIRED_COMMANDS: list[str] = [
     "ethtool",
     "resolvectl",
     "ss",
+    "mmcli",  # ModemManager CLI - for cellular modem detection
 ]
 
 # USB Tether Drivers
@@ -185,7 +186,7 @@ COLUMN_SEPARATOR: str = "   "  # 3 spaces
 # Exit Codes (Professional: Use IntEnum)
 class ExitCode(IntEnum):
     """Standard exit codes for netcheck tool.
-    
+
     Using IntEnum provides:
     - Type safety
     - IDE autocomplete

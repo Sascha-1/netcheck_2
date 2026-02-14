@@ -4,7 +4,7 @@ Comprehensive network interface analyzer for GNU/Linux systems. Provides detaile
 
 ## Features
 
-- **Interface Classification**: Ethernet, Wireless, VPN, USB Tethering, Bridge, Virtual, Loopback
+- **Interface Classification**: Ethernet, Wireless, VPN, Cellular Modem, USB Tethering, Bridge, Virtual, Loopback
 - **Hardware Identification**: Via PCI/USB vendor/device IDs from sysfs
 - **IP Configuration**: IPv4/IPv6 addresses with dual-stack support
 - **DNS Analysis**: Configuration and deterministic leak detection
@@ -20,7 +20,8 @@ Comprehensive network interface analyzer for GNU/Linux systems. Provides detaile
 2. **DNS Leak Detection**: Configuration-based (not timing-based), recognizes VPN vs ISP vs Public DNS
 3. **VPN Underlay Detection**: Identifies which physical interface carries VPN tunnel traffic
 4. **ProtonVPN Support**: Detects OpenVPN and WireGuard, shows server endpoints
-5. **No Root Required**: All operations use unprivileged APIs
+5. **Cellular vs Tethering**: Uses ModemManager to distinguish built-in modems from phone tethering
+6. **No Root Required**: All operations use unprivileged APIs
 
 ## Requirements
 
@@ -28,6 +29,7 @@ Comprehensive network interface analyzer for GNU/Linux systems. Provides detaile
 - **OS**: GNU/Linux with Kernel 6.12+
 - **Python**: 3.12 or higher
 - **systemd-resolved**: Required for DNS configuration
+- **ModemManager**: Required for cellular modem detection
 
 ### System Commands
 All of these must be installed:
@@ -37,10 +39,11 @@ All of these must be installed:
 - `ethtool`
 - `resolvectl` (systemd-resolved)
 - `ss` (iproute2)
+- `mmcli` (modemmanager)
 
 ### Installation on Debian/Ubuntu
 ```bash
-sudo apt install iproute2 pciutils usbutils ethtool systemd-resolved
+sudo apt install iproute2 pciutils usbutils ethtool systemd-resolved modemmanager
 ```
 
 ## Installation
@@ -86,6 +89,8 @@ INTERFACE        TYPE        DEVICE                INTERNAL_IPv4    INTERNAL_IPv
 =====================================================================================================================================================================================================================
 lo               loopback    N/A                   127.0.0.1        ::1                        --                    --               --                         --               --          NONE             NONE
 eth0             ethernet    Intel I219-V          192.168.1.100    2001:db8::1                192.168.1.1           203.0.113.45     2001:db8::45               Comcast          US          192.168.1.1      100
+wwp195s0f3u4     cellular    Quectel EM05-G        192.168.8.100    N/A                        192.168.8.1           203.0.113.50     N/A                        T-Mobile         US          192.168.8.1      200
+enxb2707db29505  tether      Google Pixel 9a       192.168.42.129   N/A                        192.168.42.129        203.0.113.55     N/A                        Verizon          US          192.168.42.129   300
 tun0             vpn         N/A                   10.8.0.2         N/A                        10.8.0.1              203.0.113.99     N/A                        ProtonVPN        CH          10.8.0.1         50
 =====================================================================================================================================================================================================================
 
@@ -102,6 +107,39 @@ DNS Status Meanings:
   WARN   - Using unknown DNS (investigate further)
   --     - Not applicable (no VPN active or no DNS configured)
 ```
+
+## Interface Types
+
+Netcheck classifies network interfaces into the following types:
+
+- **loopback**: Local loopback interface (lo)
+- **ethernet**: Wired Ethernet connection
+- **wireless**: Wi-Fi connection (802.11)
+- **vpn**: VPN tunnel (OpenVPN, WireGuard, PPTP, etc.)
+- **cellular**: Built-in cellular modem with SIM card (detected via ModemManager)
+- **tether**: USB phone tethering (phone sharing internet)
+- **virtual**: Virtual interface (veth, macvlan, etc.)
+- **bridge**: Bridge interface (docker, br0, etc.)
+- **unknown**: Could not determine type
+
+### Cellular vs Tethering Detection
+
+Netcheck uses **ModemManager** to deterministically distinguish between:
+
+- **Cellular Modem**: Built-in hardware modem with SIM card slot (e.g., Quectel EM05-G in ThinkPad)
+  - Detected by ModemManager's modem database
+  - Permanent hardware component
+  - Managed by ModemManager daemon
+
+- **USB Tethering**: Phone temporarily sharing internet via USB
+  - Uses same USB drivers (cdc_ether, etc.)
+  - NOT recognized by ModemManager (it's a phone, not a modem)
+  - Temporary connection
+
+This approach is:
+- ✅ **Deterministic**: No vendor lists, no guessing
+- ✅ **Future-proof**: ModemManager maintains the modem database
+- ✅ **Extensible**: Can query signal strength, carrier, SIM status in future
 
 ## Color Coding
 

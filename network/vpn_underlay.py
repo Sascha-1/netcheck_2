@@ -175,7 +175,7 @@ def find_physical_interface_for_vpn(
     """Find physical interface carrying VPN traffic.
 
     Algorithm:
-        1. Filter: physical interfaces (ethernet/wireless/tether)
+        1. Filter: physical interfaces (ethernet/wireless/cellular/tether)
         2. Filter: must have default gateway
         3. Sort by metric (deterministic - never guess DEFAULT value)
         4. Return first (highest priority)
@@ -190,10 +190,11 @@ def find_physical_interface_for_vpn(
     candidates = []
 
     for interface in interfaces:
-        # Physical interfaces only
+        # Physical interfaces only (now includes CELLULAR)
         if interface.interface_type not in (
             InterfaceType.ETHERNET,
             InterfaceType.WIRELESS,
+            InterfaceType.CELLULAR,  # NEW: Cellular modems can carry VPN
             InterfaceType.TETHER,
         ):
             continue

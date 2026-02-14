@@ -53,6 +53,8 @@ def check_dependencies() -> bool:
                 logger.error("  Install: sudo apt install ethtool")
             elif cmd == "ss":
                 logger.error("  Install: sudo apt install iproute2")
+            elif cmd == "mmcli":
+                logger.error("  Install: sudo apt install modemmanager")
 
     return len(missing) == 0
 

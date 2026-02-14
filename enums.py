@@ -13,7 +13,8 @@ class InterfaceType(str, Enum):
     ETHERNET = "ethernet"
     WIRELESS = "wireless"
     VPN = "vpn"
-    TETHER = "tether"
+    CELLULAR = "cellular"  # Built-in modem with SIM card (e.g., Quectel EM05-G)
+    TETHER = "tether"      # USB phone tethering (e.g., Pixel sharing internet)
     VIRTUAL = "virtual"
     BRIDGE = "bridge"
     UNKNOWN = "unknown"
