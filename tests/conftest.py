@@ -13,6 +13,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from enums import DnsLeakStatus, InterfaceType
+from logging_config import setup_logging
 from models import (
     DNSConfig,
     EgressInfo,
@@ -21,6 +22,22 @@ from models import (
     RoutingInfo,
     VPNInfo,
 )
+
+
+# Configure logging once for entire test session
+# This prevents logging handler MagicMock errors
+@pytest.fixture(scope="session", autouse=True)
+def configure_logging():
+    """Configure logging for all tests.
+    
+    This ensures all loggers have properly initialized handlers with integer
+    .level attributes, preventing TypeError: '>=' not supported between
+    instances of 'int' and 'MagicMock'.
+    
+    Runs once before any tests (scope="session", autouse=True).
+    """
+    setup_logging(verbose=False)
+    yield
 
 
 @pytest.fixture
