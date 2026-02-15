@@ -34,7 +34,8 @@ files = [
     "colors.py",
     "logging_config.py",
     "utils/",
-    "network/"
+    "network/",
+    "tests/"
 ]
 
 [tool.ruff]
@@ -73,4 +74,50 @@ logging-format-style = "old" # Use % style for logging
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = ["-v", "--strict-markers", "--cov=.", "--cov-report=term-missing"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--cov=.",
+    "--cov-report=term-missing",
+    # Don't fail on coverage - tests should verify quality, not chase metrics
+    # "--cov-fail-under=87",  # Commented out - focus on quality, not numbers
+]
+
+# Test markers for selective execution
+markers = [
+    "integration: Integration tests requiring real Linux system with actual hardware/commands",
+    "slow: Tests that take longer than 1 second (use -m 'not slow' to skip)",
+    "network: Tests requiring active network connection",
+    "api: Tests that hit external APIs (ipinfo.io) - may be rate limited",
+    "security: Security-focused tests (injection attacks, validation)",
+    "regression: Tests for specific bugs that were found and fixed",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+branch = true
+source = ["."]
+omit = [
+    "tests/*",
+    "setup.py",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+]
+
+[tool.coverage.report]
+precision = 2
+skip_covered = false
+show_missing = true
+sort = "Cover"
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
