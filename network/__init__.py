@@ -17,6 +17,7 @@ from .ip_routing import (
     get_all_ipv6_addresses,
     get_route_info,
 )
+from .routing_utils import get_metric_sort_key
 from .vpn_underlay import detect_vpn_underlay
 
 __all__ = [
@@ -36,4 +37,6 @@ __all__ = [
     "get_egress_info",
     # VPN
     "detect_vpn_underlay",
+    # Routing Utilities
+    "get_metric_sort_key",
 ]

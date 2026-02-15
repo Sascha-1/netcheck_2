@@ -9,8 +9,8 @@ import re
 from enums import InterfaceType
 from logging_config import get_logger
 from models import InterfaceInfo
+from network.routing_utils import get_metric_sort_key
 from utils import run_command, sanitize_for_log
-from utils.metric_sort import get_metric_sort_key
 
 logger = get_logger(__name__)
 

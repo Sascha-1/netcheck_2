@@ -6,8 +6,8 @@ Provides IPv4/IPv6 address detection and routing table analysis.
 import re
 
 from logging_config import get_logger
+from network.routing_utils import get_metric_sort_key
 from utils import run_command, sanitize_for_log
-from utils.metric_sort import get_metric_sort_key
 
 logger = get_logger(__name__)
 
@@ -113,7 +113,7 @@ def get_route_info(iface_name: str) -> tuple[str, str]:
         1. Honesty: "DEFAULT" accurately means "kernel's default, we don't know"
         2. Design principle: Never guess or assume values
         3. Ambiguity: Which destination to query? Results may vary.
-        4. Sorting works: "DEFAULT" sorts after explicit metrics (see metric_sort.py)
+        4. Sorting works: "DEFAULT" sorts after explicit metrics (see routing_utils.py)
         5. User clarity: Explicit metric (98) vs DEFAULT is clear enough
 
     If you need the effective metric, use: ip route get 8.8.8.8 | grep metric
