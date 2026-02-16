@@ -1,9 +1,10 @@
 """Tests for network/vpn_underlay.py.
 
 Tests VPN tunnel analysis and underlay detection with mocked commands.
+FIXED: Added MagicMock type annotations to all mock parameters
 """
 
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -48,7 +49,7 @@ class TestGetVpnServerEndpoint:
     """Tests for get_vpn_server_endpoint function."""
 
     @patch("network.vpn_underlay.run_command")
-    def test_connection_from_vpn_ip(self, mock_run) -> None:
+    def test_connection_from_vpn_ip(self, mock_run: MagicMock) -> None:
         """Test VPN server detected from VPN interface IP."""
         # Real ss output format includes more columns
         mock_run.return_value = """tcp   ESTAB      0      0      10.8.0.2:51234              8.8.8.8:51820"""
@@ -58,7 +59,7 @@ class TestGetVpnServerEndpoint:
         assert result == "8.8.8.8"
 
     @patch("network.vpn_underlay.run_command")
-    def test_wireguard_port(self, mock_run) -> None:
+    def test_wireguard_port(self, mock_run: MagicMock) -> None:
         """Test WireGuard port (51820) is detected."""
         mock_run.return_value = """tcp   ESTAB      0      0      192.168.1.100:51234         8.8.8.8:51820"""
 
@@ -67,7 +68,7 @@ class TestGetVpnServerEndpoint:
         assert result == "8.8.8.8"
 
     @patch("network.vpn_underlay.run_command")
-    def test_openvpn_port(self, mock_run) -> None:
+    def test_openvpn_port(self, mock_run: MagicMock) -> None:
         """Test OpenVPN ports (1194, 443) are detected."""
         mock_run.return_value = """tcp   ESTAB      0      0      192.168.1.100:51234         8.8.8.8:1194"""
 
@@ -76,7 +77,7 @@ class TestGetVpnServerEndpoint:
         assert result == "8.8.8.8"
 
     @patch("network.vpn_underlay.run_command")
-    def test_ignore_dns_port(self, mock_run) -> None:
+    def test_ignore_dns_port(self, mock_run: MagicMock) -> None:
         """Test DNS connections (port 53) are ignored."""
         mock_run.return_value = """tcp   ESTAB      0      0      192.168.1.100:51234         8.8.8.8:53"""
 
@@ -85,7 +86,7 @@ class TestGetVpnServerEndpoint:
         assert result is None
 
     @patch("network.vpn_underlay.run_command")
-    def test_ignore_private_ips(self, mock_run) -> None:
+    def test_ignore_private_ips(self, mock_run: MagicMock) -> None:
         """Test private IPs are ignored."""
         mock_run.return_value = """tcp   ESTAB      0      0      10.8.0.2:51234              192.168.1.1:51820"""
 
@@ -94,7 +95,7 @@ class TestGetVpnServerEndpoint:
         assert result is None
 
     @patch("network.vpn_underlay.run_command")
-    def test_priority_vpn_ip_over_port(self, mock_run) -> None:
+    def test_priority_vpn_ip_over_port(self, mock_run: MagicMock) -> None:
         """Test VPN IP match has priority over port match."""
         mock_run.return_value = """tcp   ESTAB      0      0      192.168.1.100:51234         8.8.4.4:51820
 tcp   ESTAB      0      0      10.8.0.2:51235              8.8.8.8:443"""
@@ -105,7 +106,7 @@ tcp   ESTAB      0      0      10.8.0.2:51235              8.8.8.8:443"""
         assert result == "8.8.8.8"
 
     @patch("network.vpn_underlay.run_command")
-    def test_no_local_ip(self, mock_run) -> None:
+    def test_no_local_ip(self, mock_run: MagicMock) -> None:
         """Test returns None when no local IP."""
         result = get_vpn_server_endpoint("tun0", InterfaceType.VPN, "N/A")
 
@@ -113,7 +114,7 @@ tcp   ESTAB      0      0      10.8.0.2:51235              8.8.8.8:443"""
         mock_run.assert_not_called()
 
     @patch("network.vpn_underlay.run_command")
-    def test_command_failure(self, mock_run) -> None:
+    def test_command_failure(self, mock_run: MagicMock) -> None:
         """Test command failure returns None."""
         mock_run.return_value = None
 
@@ -233,7 +234,7 @@ class TestDetectVpnUnderlay:
     """Tests for detect_vpn_underlay function."""
 
     @patch("network.vpn_underlay.get_vpn_server_endpoint")
-    def test_sets_vpn_server_ip(self, mock_get_server) -> None:
+    def test_sets_vpn_server_ip(self, mock_get_server: MagicMock) -> None:
         """Test VPN server IP is set on VPN interface."""
         mock_get_server.return_value = "8.8.8.8"
 
@@ -248,7 +249,7 @@ class TestDetectVpnUnderlay:
         assert interfaces[0].vpn.server_ip == "8.8.8.8"
 
     @patch("network.vpn_underlay.get_vpn_server_endpoint")
-    def test_marks_carrier_interface(self, mock_get_server) -> None:
+    def test_marks_carrier_interface(self, mock_get_server: MagicMock) -> None:
         """Test carrier interface is marked with carries_vpn."""
         mock_get_server.return_value = "8.8.8.8"
 
@@ -266,7 +267,7 @@ class TestDetectVpnUnderlay:
         assert interfaces[1].vpn.carries_vpn is True
 
     @patch("network.vpn_underlay.get_vpn_server_endpoint")
-    def test_no_server_detected(self, mock_get_server) -> None:
+    def test_no_server_detected(self, mock_get_server: MagicMock) -> None:
         """Test handles case when no server detected."""
         mock_get_server.return_value = None
 

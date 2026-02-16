@@ -7,6 +7,7 @@ FIXES:
 - Modem test side_effect fixed
 - get_device_name tests now properly mock _get_usb_info and _get_pci_ids
 - All tests account for pytest LogCaptureHandler
+- FIXED: Added MagicMock type annotations to all 39 mock parameters
 """
 
 from pathlib import Path
@@ -40,7 +41,7 @@ class TestGetInterfaceList:
     """Tests for get_interface_list function."""
 
     @patch("network.detection.run_command")
-    def test_handles_command_failure(self, mock_run) -> None:
+    def test_handles_command_failure(self, mock_run: MagicMock) -> None:
         """BUG: Could crash if ip command fails.
         
         PREVENTED: Tool works when iproute2 not installed
@@ -53,7 +54,7 @@ class TestGetInterfaceList:
         assert result == []
 
     @patch("network.detection.run_command")
-    def test_handles_empty_output(self, mock_run) -> None:
+    def test_handles_empty_output(self, mock_run: MagicMock) -> None:
         """BUG: Could crash on empty output.
         
         PREVENTED: Graceful handling of no interfaces
@@ -66,7 +67,7 @@ class TestGetInterfaceList:
         assert result == []
 
     @patch("network.detection.run_command")
-    def test_handles_malformed_output(self, mock_run) -> None:
+    def test_handles_malformed_output(self, mock_run: MagicMock) -> None:
         """BUG: Parser assumes specific format.
         
         PREVENTED: Crash when ip output format changes
@@ -133,7 +134,7 @@ class TestIsWireless:
     """Tests for _is_wireless function."""
 
     @patch("network.detection.Path")
-    def test_detects_wireless_via_sysfs(self, mock_path) -> None:
+    def test_detects_wireless_via_sysfs(self, mock_path: MagicMock) -> None:
         """Test wireless detection via phy80211."""
         mock_phy = MagicMock()
         mock_phy.exists.return_value = True
@@ -144,7 +145,7 @@ class TestIsWireless:
         assert result is True
 
     @patch("network.detection.Path")
-    def test_rejects_non_wireless(self, mock_path) -> None:
+    def test_rejects_non_wireless(self, mock_path: MagicMock) -> None:
         """Test non-wireless interfaces."""
         mock_phy = MagicMock()
         mock_phy.exists.return_value = False
@@ -159,7 +160,7 @@ class TestDetectWireless:
     """Tests for _detect_wireless function."""
 
     @patch("network.detection._is_wireless")
-    def test_detects_wireless_interface(self, mock_is_wireless) -> None:
+    def test_detects_wireless_interface(self, mock_is_wireless: MagicMock) -> None:
         """Test wireless interface detection."""
         mock_is_wireless.return_value = True
         
@@ -169,7 +170,7 @@ class TestDetectWireless:
         assert iface_type == InterfaceType.WIRELESS
 
     @patch("network.detection._is_wireless")
-    def test_rejects_non_wireless(self, mock_is_wireless) -> None:
+    def test_rejects_non_wireless(self, mock_is_wireless: MagicMock) -> None:
         """Test non-wireless interfaces."""
         mock_is_wireless.return_value = False
         
@@ -183,7 +184,7 @@ class TestDetectByKernelType:
     """Tests for _detect_by_kernel_type function."""
 
     @patch("network.detection.run_command")
-    def test_handles_command_failure(self, mock_run) -> None:
+    def test_handles_command_failure(self, mock_run: MagicMock) -> None:
         """BUG: Could crash if ip -d fails.
         
         PREVENTED: Graceful degradation
@@ -197,7 +198,7 @@ class TestDetectByKernelType:
         assert iface_type is None
 
     @patch("network.detection.run_command")
-    def test_detects_wireguard(self, mock_run) -> None:
+    def test_detects_wireguard(self, mock_run: MagicMock) -> None:
         """Test WireGuard detection from kernel info."""
         mock_run.return_value = "link/none\nWireGuard interface"
         
@@ -207,7 +208,7 @@ class TestDetectByKernelType:
         assert iface_type == InterfaceType.VPN
 
     @patch("network.detection.run_command")
-    def test_detects_tun(self, mock_run) -> None:
+    def test_detects_tun(self, mock_run: MagicMock) -> None:
         """Test TUN interface detection."""
         mock_run.return_value = "link/none\ntun interface"
         
@@ -217,7 +218,7 @@ class TestDetectByKernelType:
         assert iface_type == InterfaceType.VPN
 
     @patch("network.detection.run_command")
-    def test_detects_veth(self, mock_run) -> None:
+    def test_detects_veth(self, mock_run: MagicMock) -> None:
         """Test veth interface detection."""
         mock_run.return_value = "link/ether\nveth pair"
         
@@ -227,7 +228,7 @@ class TestDetectByKernelType:
         assert iface_type == InterfaceType.VIRTUAL
 
     @patch("network.detection.run_command")
-    def test_detects_bridge(self, mock_run) -> None:
+    def test_detects_bridge(self, mock_run: MagicMock) -> None:
         """Test bridge interface detection."""
         mock_run.return_value = "link/ether\nbridge interface"
         
@@ -269,7 +270,7 @@ class TestGetModemManagerDevicePaths:
     """Tests for _get_modemmanager_device_paths function."""
 
     @patch("network.detection.run_command")
-    def test_handles_mmcli_not_found(self, mock_run) -> None:
+    def test_handles_mmcli_not_found(self, mock_run: MagicMock) -> None:
         """BUG: Could crash if mmcli not installed.
         
         PREVENTED: Tool works without ModemManager
@@ -285,7 +286,7 @@ class TestGetModemManagerDevicePaths:
         assert result == []
 
     @patch("network.detection.run_command")
-    def test_handles_no_modems(self, mock_run) -> None:
+    def test_handles_no_modems(self, mock_run: MagicMock) -> None:
         """BUG: Could fail if no modems present.
         
         PREVENTED: Graceful handling of no cellular hardware
@@ -301,7 +302,7 @@ class TestGetModemManagerDevicePaths:
         assert result == []
 
     @patch("network.detection.run_command")
-    def test_parses_modem_indices(self, mock_run) -> None:
+    def test_parses_modem_indices(self, mock_run: MagicMock) -> None:
         """Test parsing modem indices from mmcli output."""
         # FIXED: Return values in order of calls
         mock_run.side_effect = [
@@ -319,7 +320,7 @@ class TestGetModemManagerDevicePaths:
         assert "/sys/devices/pci0000:00/0000:00:14.0/usb1/1-3" in result
 
     @patch("network.detection.run_command")
-    def test_handles_malformed_modem_output(self, mock_run) -> None:
+    def test_handles_malformed_modem_output(self, mock_run: MagicMock) -> None:
         """BUG: Parser assumes specific mmcli format.
         
         PREVENTED: Crash on ModemManager version differences
@@ -344,7 +345,7 @@ class TestDetectCellularModem:
 
     @patch("network.detection._get_modemmanager_device_paths")
     @patch("network.detection._get_device_path")
-    def test_detects_cellular_modem(self, mock_device_path, mock_mm_paths) -> None:
+    def test_detects_cellular_modem(self, mock_device_path: MagicMock, mock_mm_paths: MagicMock) -> None:
         """Test cellular modem detection."""
         mock_device_path.return_value = Path("/sys/devices/pci0000:00/usb/modem")
         mock_mm_paths.return_value = ["/sys/devices/pci0000:00/usb/modem"]
@@ -356,7 +357,7 @@ class TestDetectCellularModem:
 
     @patch("network.detection._get_modemmanager_device_paths")
     @patch("network.detection._get_device_path")
-    def test_rejects_non_cellular(self, mock_device_path, mock_mm_paths) -> None:
+    def test_rejects_non_cellular(self, mock_device_path: MagicMock, mock_mm_paths: MagicMock) -> None:
         """Test non-cellular interfaces."""
         mock_device_path.return_value = Path("/sys/devices/pci0000:00/eth")
         mock_mm_paths.return_value = ["/sys/devices/pci0000:00/usb/modem"]
@@ -368,7 +369,7 @@ class TestDetectCellularModem:
 
     @patch("network.detection._get_modemmanager_device_paths")
     @patch("network.detection._get_device_path")
-    def test_handles_no_modems(self, mock_device_path, mock_mm_paths) -> None:
+    def test_handles_no_modems(self, mock_device_path: MagicMock, mock_mm_paths: MagicMock) -> None:
         """Test when no modems available."""
         mock_device_path.return_value = Path("/sys/devices/pci0000:00/usb/device")
         mock_mm_paths.return_value = []
@@ -382,7 +383,7 @@ class TestGetUSBInfo:
     """Tests for _get_usb_info function."""
 
     @patch("network.detection._get_device_path")
-    def test_returns_false_for_non_usb(self, mock_device_path) -> None:
+    def test_returns_false_for_non_usb(self, mock_device_path: MagicMock) -> None:
         """Test non-USB devices."""
         mock_device_path.return_value = Path("/sys/devices/pci0000:00/eth")
         
@@ -396,7 +397,7 @@ class TestGetUSBInfo:
         assert ids is None
 
     @patch("network.detection._get_device_path")
-    def test_handles_missing_device_path(self, mock_device_path) -> None:
+    def test_handles_missing_device_path(self, mock_device_path: MagicMock) -> None:
         """BUG: Could crash if device path missing.
         
         PREVENTED: Graceful handling of sysfs issues
@@ -417,7 +418,7 @@ class TestIsUSBTetheredDevice:
 
     @patch("network.detection._get_usb_info")
     @patch("network.detection.config.USB_TETHER_DRIVERS", ["rndis_host", "cdc_ether"])
-    def test_detects_rndis_tethering(self, mock_usb_info) -> None:
+    def test_detects_rndis_tethering(self, mock_usb_info: MagicMock) -> None:
         """Test RNDIS tethering detection."""
         mock_usb_info.return_value = (True, "rndis_host", ("18d1", "4eeb"))
         
@@ -427,7 +428,7 @@ class TestIsUSBTetheredDevice:
 
     @patch("network.detection._get_usb_info")
     @patch("network.detection.config.USB_TETHER_DRIVERS", ["rndis_host"])
-    def test_rejects_non_tether_driver(self, mock_usb_info) -> None:
+    def test_rejects_non_tether_driver(self, mock_usb_info: MagicMock) -> None:
         """Test non-tethering USB devices."""
         mock_usb_info.return_value = (True, "other_driver", ("18d1", "4eeb"))
         
@@ -436,7 +437,7 @@ class TestIsUSBTetheredDevice:
         assert result is False
 
     @patch("network.detection._get_usb_info")
-    def test_handles_no_driver_info(self, mock_usb_info) -> None:
+    def test_handles_no_driver_info(self, mock_usb_info: MagicMock) -> None:
         """BUG: Could crash if driver info unavailable.
         
         PREVENTED: Graceful handling of missing sysfs data
@@ -453,7 +454,7 @@ class TestDetectUSBTether:
     """Tests for _detect_usb_tether function."""
 
     @patch("network.detection.is_usb_tethered_device")
-    def test_detects_tethering(self, mock_is_tether) -> None:
+    def test_detects_tethering(self, mock_is_tether: MagicMock) -> None:
         """Test USB tethering detection."""
         mock_is_tether.return_value = True
         
@@ -463,7 +464,7 @@ class TestDetectUSBTether:
         assert iface_type == InterfaceType.TETHER
 
     @patch("network.detection.is_usb_tethered_device")
-    def test_rejects_non_tethering(self, mock_is_tether) -> None:
+    def test_rejects_non_tethering(self, mock_is_tether: MagicMock) -> None:
         """Test non-tethering interfaces."""
         mock_is_tether.return_value = False
         
@@ -478,7 +479,7 @@ class TestGetPCIDeviceName:
 
     @patch("network.detection.run_command")
     @patch("network.detection._get_pci_ids")
-    def test_handles_lspci_not_found(self, mock_pci_ids, mock_run) -> None:
+    def test_handles_lspci_not_found(self, mock_pci_ids: MagicMock, mock_run: MagicMock) -> None:
         """BUG: Could crash if lspci not installed.
         
         PREVENTED: Tool works without pciutils
@@ -493,7 +494,7 @@ class TestGetPCIDeviceName:
 
     @patch("network.detection.run_command")
     @patch("network.detection._get_pci_ids")
-    def test_handles_no_pci_ids(self, mock_pci_ids, mock_run) -> None:
+    def test_handles_no_pci_ids(self, mock_pci_ids: MagicMock, mock_run: MagicMock) -> None:
         """Test non-PCI devices."""
         mock_pci_ids.return_value = None
         
@@ -503,7 +504,7 @@ class TestGetPCIDeviceName:
 
     @patch("network.detection.run_command")
     @patch("network.detection._get_pci_ids")
-    def test_parses_lspci_output(self, mock_pci_ids, mock_run) -> None:
+    def test_parses_lspci_output(self, mock_pci_ids: MagicMock, mock_run: MagicMock) -> None:
         """Test parsing lspci output."""
         mock_pci_ids.return_value = ("8086", "15f3")
         mock_run.return_value = "00:1f.6 Ethernet controller: Intel Corporation I225-V Gigabit Network Connection"
@@ -514,7 +515,7 @@ class TestGetPCIDeviceName:
 
     @patch("network.detection.run_command")
     @patch("network.detection._get_pci_ids")
-    def test_handles_malformed_lspci_output(self, mock_pci_ids, mock_run) -> None:
+    def test_handles_malformed_lspci_output(self, mock_pci_ids: MagicMock, mock_run: MagicMock) -> None:
         """BUG: Parser assumes specific lspci format.
         
         PREVENTED: Graceful handling of format changes
@@ -534,7 +535,7 @@ class TestGetUSBDeviceName:
 
     @patch("network.detection.run_command")
     @patch("network.detection._get_usb_info")
-    def test_handles_lsusb_not_found(self, mock_usb_info, mock_run) -> None:
+    def test_handles_lsusb_not_found(self, mock_usb_info: MagicMock, mock_run: MagicMock) -> None:
         """BUG: Could crash if lsusb not installed.
         
         PREVENTED: Tool works without usbutils
@@ -549,7 +550,7 @@ class TestGetUSBDeviceName:
 
     @patch("network.detection.run_command")
     @patch("network.detection._get_usb_info")
-    def test_handles_no_usb_ids(self, mock_usb_info, mock_run) -> None:
+    def test_handles_no_usb_ids(self, mock_usb_info: MagicMock, mock_run: MagicMock) -> None:
         """Test non-USB devices."""
         mock_usb_info.return_value = (False, None, None)
         
@@ -559,7 +560,7 @@ class TestGetUSBDeviceName:
 
     @patch("network.detection.run_command")
     @patch("network.detection._get_usb_info")
-    def test_parses_lsusb_output(self, mock_usb_info, mock_run) -> None:
+    def test_parses_lsusb_output(self, mock_usb_info: MagicMock, mock_run: MagicMock) -> None:
         """Test parsing lsusb output."""
         mock_usb_info.return_value = (True, "rndis_host", ("18d1", "4eeb"))
         mock_run.return_value = "Bus 001 Device 003: ID 18d1:4eeb Google Inc. Nexus/Pixel Device (charging + debug)"
@@ -570,7 +571,7 @@ class TestGetUSBDeviceName:
 
     @patch("network.detection.run_command")
     @patch("network.detection._get_usb_info")
-    def test_handles_malformed_lsusb_output(self, mock_usb_info, mock_run) -> None:
+    def test_handles_malformed_lsusb_output(self, mock_usb_info: MagicMock, mock_run: MagicMock) -> None:
         """BUG: Parser assumes specific lsusb format.
         
         PREVENTED: Graceful handling of format changes
@@ -609,7 +610,7 @@ class TestGetDeviceName:
 
     @patch("network.detection._get_usb_info")
     @patch("network.detection.get_usb_device_name")
-    def test_tries_usb_before_pci(self, mock_usb_name, mock_usb_info) -> None:
+    def test_tries_usb_before_pci(self, mock_usb_name: MagicMock, mock_usb_info: MagicMock) -> None:
         """Test USB is checked before PCI."""
         # FIXED: Mock _get_usb_info to indicate USB hardware present
         mock_usb_info.return_value = (True, "some_driver", ("18d1", "4eeb"))
@@ -623,7 +624,7 @@ class TestGetDeviceName:
     @patch("network.detection._get_pci_ids")
     @patch("network.detection._get_usb_info")
     @patch("network.detection.get_pci_device_name")
-    def test_falls_back_to_pci(self, mock_pci_name, mock_usb_info, mock_pci_ids) -> None:
+    def test_falls_back_to_pci(self, mock_pci_name: MagicMock, mock_usb_info: MagicMock, mock_pci_ids: MagicMock) -> None:
         """Test fallback to PCI when USB fails."""
         # FIXED: Mock _get_usb_info to indicate not USB
         mock_usb_info.return_value = (False, None, None)
@@ -637,7 +638,7 @@ class TestGetDeviceName:
 
     @patch("network.detection._get_pci_ids")
     @patch("network.detection._get_usb_info")
-    def test_returns_na_when_both_fail(self, mock_usb_info, mock_pci_ids) -> None:
+    def test_returns_na_when_both_fail(self, mock_usb_info: MagicMock, mock_pci_ids: MagicMock) -> None:
         """Test returns N/A when all methods fail."""
         # FIXED: Properly mock both checks to fail
         mock_usb_info.return_value = (False, None, None)
@@ -652,7 +653,7 @@ class TestDetectInterfaceType:
     """Tests for detect_interface_type integration."""
 
     @patch("network.detection._detect_loopback")
-    def test_respects_detector_priority(self, mock_loopback) -> None:
+    def test_respects_detector_priority(self, mock_loopback: MagicMock) -> None:
         """Test detector priority order is respected."""
         mock_loopback.return_value = (True, InterfaceType.LOOPBACK)
         
@@ -671,13 +672,13 @@ class TestDetectInterfaceType:
     @patch("network.detection._detect_by_name_pattern")
     def test_returns_unknown_when_all_fail(
         self,
-        mock_pattern,
-        mock_kernel,
-        mock_wireless,
-        mock_vpn,
-        mock_tether,
-        mock_cellular,
-        mock_loopback,
+        mock_pattern: MagicMock,
+        mock_kernel: MagicMock,
+        mock_wireless: MagicMock,
+        mock_vpn: MagicMock,
+        mock_tether: MagicMock,
+        mock_cellular: MagicMock,
+        mock_loopback: MagicMock,
     ) -> None:
         """Test returns UNKNOWN when no detector matches."""
         # All detectors return no match

@@ -1,16 +1,16 @@
-"""Comprehensive tests for logging_config.py - FINAL FIXED VERSION.
+"""Comprehensive tests for logging_config.py - FIXED VERSION.
 
 Tests logging setup, color formatting, and configuration variations.
 Every test prevents a specific bug in logging configuration.
 
-FINAL FIXES:
-- Use caplog fixture instead of patching stdout/stderr (avoids handler.level MockMock issue)
-- All integration tests now use caplog to capture output
-- Proper teardown that doesn't interfere with pytest's logging
+FIXES APPLIED:
+1. Line 23: Added typing.Any type parameter to StreamHandler return type
+2. Line 338: Added None check before accessing handler.formatter._fmt (2 errors)
 """
 
 import logging
 import sys
+import typing
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -19,8 +19,11 @@ import pytest
 from logging_config import ColoredFormatter, get_logger, setup_logging
 
 
-def get_stream_handler(root_logger: logging.Logger) -> logging.StreamHandler | None:
-    """Helper to find StreamHandler among pytest's handlers."""
+def get_stream_handler(root_logger: logging.Logger) -> logging.StreamHandler[typing.Any] | None:
+    """Helper to find StreamHandler among pytest's handlers.
+    
+    FIXED: Added [typing.Any] type parameter to StreamHandler
+    """
     for handler in root_logger.handlers:
         if isinstance(handler, logging.StreamHandler) and not handler.__class__.__name__.startswith("LogCapture"):
             return handler
@@ -308,7 +311,7 @@ class TestSetupLogging:
         assert requests_logger.level == logging.WARNING
 
     @patch("logging.FileHandler")
-    def test_file_handler_uses_detailed_format(self, mock_handler) -> None:
+    def test_file_handler_uses_detailed_format(self, mock_handler: MagicMock) -> None:
         """Test file handler uses detailed format with timestamps."""
         mock_instance = MagicMock()
         mock_handler.return_value = mock_instance
@@ -333,8 +336,8 @@ class TestSetupLogging:
         handler = get_stream_handler(root)
         
         assert handler is not None
-        # Console should use simple format
-        assert "%(levelname)s: %(message)s" in handler.formatter._fmt
+        # FIXED: Added None check before accessing ._fmt
+        assert handler.formatter is not None and "%(levelname)s: %(message)s" in handler.formatter._fmt
 
 
 class TestGetLogger:
@@ -384,9 +387,8 @@ class TestLoggingIntegration:
         root.handlers = [h for h in root.handlers if not isinstance(h, logging.StreamHandler) or h.__class__.__name__.startswith("LogCapture")]
         root.setLevel(logging.WARNING)
 
-    def test_verbose_mode_shows_debug_messages(self, caplog) -> None:
+    def test_verbose_mode_shows_debug_messages(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test verbose mode actually logs DEBUG messages."""
-        # FIXED: Use caplog instead of patching stdout
         setup_logging(verbose=True)
         
         with caplog.at_level(logging.DEBUG):
@@ -395,9 +397,8 @@ class TestLoggingIntegration:
         
         assert "debug message" in caplog.text
 
-    def test_non_verbose_mode_hides_debug_messages(self, caplog) -> None:
+    def test_non_verbose_mode_hides_debug_messages(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test non-verbose mode filters DEBUG messages."""
-        # FIXED: Use caplog instead of patching stderr
         setup_logging(verbose=False)
         
         with caplog.at_level(logging.DEBUG):
@@ -407,9 +408,8 @@ class TestLoggingIntegration:
         # Should not be in output (filtered by WARNING level)
         assert "debug message" not in caplog.text
 
-    def test_non_verbose_mode_shows_warnings(self, caplog) -> None:
+    def test_non_verbose_mode_shows_warnings(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test non-verbose mode shows WARNING+ messages."""
-        # FIXED: Use caplog
         setup_logging(verbose=False)
         
         with caplog.at_level(logging.WARNING):
@@ -418,9 +418,8 @@ class TestLoggingIntegration:
         
         assert "warning message" in caplog.text
 
-    def test_colored_output_includes_ansi_codes(self, caplog) -> None:
+    def test_colored_output_includes_ansi_codes(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test colored output has ANSI escape codes."""
-        # FIXED: Use caplog and check formatter directly
         setup_logging(verbose=True, use_colors=True)
         
         root = logging.getLogger()
@@ -442,9 +441,8 @@ class TestLoggingIntegration:
         formatted = handler.formatter.format(record)
         assert "\033[" in formatted  # ANSI escape code
 
-    def test_plain_output_has_no_ansi_codes(self, caplog) -> None:
+    def test_plain_output_has_no_ansi_codes(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test plain output has no ANSI escape codes."""
-        # FIXED: Check formatter type instead of output
         setup_logging(verbose=True, use_colors=False)
         
         root = logging.getLogger()
@@ -454,7 +452,7 @@ class TestLoggingIntegration:
         assert not isinstance(handler.formatter, ColoredFormatter)
 
     @patch("logging.FileHandler")
-    def test_file_logging_works(self, mock_handler) -> None:
+    def test_file_logging_works(self, mock_handler: MagicMock) -> None:
         """Test file logging is set up correctly."""
         mock_instance = MagicMock()
         mock_handler.return_value = mock_instance
@@ -475,9 +473,8 @@ class TestLoggingIntegration:
         # Should inherit root level
         assert logger.getEffectiveLevel() == logging.DEBUG
 
-    def test_different_modules_can_log_independently(self, caplog) -> None:
+    def test_different_modules_can_log_independently(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test multiple module loggers work independently."""
-        # FIXED: Use caplog
         setup_logging(verbose=True)
         
         with caplog.at_level(logging.INFO):
@@ -500,13 +497,12 @@ class TestLoggingEdgeCases:
         root.handlers = [h for h in root.handlers if not isinstance(h, logging.StreamHandler) or h.__class__.__name__.startswith("LogCapture")]
         root.setLevel(logging.WARNING)
 
-    def test_handles_unicode_in_log_messages(self, caplog) -> None:
+    def test_handles_unicode_in_log_messages(self, caplog: pytest.LogCaptureFixture) -> None:
         """BUG: Could crash on unicode characters.
         
         PREVENTED: Handles international characters
         REAL SCENARIO: Network SSIDs with unicode
         """
-        # FIXED: Use caplog
         setup_logging(verbose=True)
         
         with caplog.at_level(logging.INFO):
@@ -515,13 +511,12 @@ class TestLoggingEdgeCases:
         
         assert "café" in caplog.text or "caf" in caplog.text
 
-    def test_handles_percent_signs_in_messages(self, caplog) -> None:
+    def test_handles_percent_signs_in_messages(self, caplog: pytest.LogCaptureFixture) -> None:
         """BUG: Percent signs could break % formatting.
         
         PREVENTED: Safe handling of % in messages
         REAL SCENARIO: MAC addresses, percentages in output
         """
-        # FIXED: Use caplog
         setup_logging(verbose=True)
         
         with caplog.at_level(logging.INFO):
@@ -541,9 +536,8 @@ class TestLoggingEdgeCases:
         stream_handlers = [h for h in root.handlers if isinstance(h, logging.StreamHandler) and not h.__class__.__name__.startswith("LogCapture")]
         assert len(stream_handlers) == 1  # Only console handler
 
-    def test_handles_empty_log_messages(self, caplog) -> None:
+    def test_handles_empty_log_messages(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test empty log messages don't cause issues."""
-        # FIXED: Use caplog
         setup_logging(verbose=True)
         
         with caplog.at_level(logging.INFO):

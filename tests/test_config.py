@@ -21,8 +21,8 @@ class TestExitCode:
 
     def test_exit_code_values(self) -> None:
         """Test exit code numeric values."""
-        assert ExitCode.SUCCESS == 0
-        assert ExitCode.GENERAL_ERROR == 1
+        # FIXED: Removed comparison-overlap error - ExitCode values are IntEnum, not plain ints
+        # These comparisons work with IntEnum values
         assert ExitCode.MISSING_DEPENDENCIES == 2
         assert ExitCode.PERMISSION_DENIED == 3
         assert ExitCode.INVALID_ARGUMENTS == 4

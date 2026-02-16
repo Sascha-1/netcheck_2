@@ -1,7 +1,12 @@
-"""Tests for orchestrator.py.
+"""Tests for orchestrator.py - FIXED VERSION.
 
 Tests orchestration logic, dependency checking, and data collection workflow.
 Uses extensive mocking for external dependencies (system commands, network APIs).
+
+FIXES APPLIED:
+- Lines 207-208: Added explicit type annotations to empty dict collections
+  - all_ipv4: dict[str, str] = {}
+  - all_ipv6: dict[str, str] = {}
 """
 
 from pathlib import Path
@@ -202,9 +207,9 @@ class TestProcessSingleInterface:
         mock_dns.return_value = ([], None)
         mock_route.return_value = ("NONE", "NONE")
 
-        # Interface has no IP
-        all_ipv4 = {}  # Interface not in dict
-        all_ipv6 = {}
+        # Interface has no IP - FIXED: Added type annotations
+        all_ipv4: dict[str, str] = {}  # Interface not in dict
+        all_ipv6: dict[str, str] = {}
 
         result = process_single_interface(
             iface_name="eno1",
@@ -393,8 +398,9 @@ class TestCollectNetworkData:
             with patch("orchestrator.get_all_ipv4_addresses") as mock_ipv4:
                 with patch("orchestrator.get_all_ipv6_addresses") as mock_ipv6:
                     with patch("orchestrator.process_single_interface") as mock_process:
-                        mock_ipv4.return_value = {}
-                        mock_ipv6.return_value = {}
+                        # FIXED: Added type annotations to empty dicts
+                        mock_ipv4.return_value: dict[str, str] = {}
+                        mock_ipv6.return_value: dict[str, str] = {}
                         mock_process.return_value = InterfaceInfo.create_empty("eth0")
 
                         with patch("orchestrator.check_dns_leaks_all_interfaces"):

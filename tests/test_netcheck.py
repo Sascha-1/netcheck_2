@@ -1,6 +1,7 @@
 """Tests for netcheck.py.
 
 Tests CLI argument parsing, main workflow, and exit code handling.
+FIXED: Added MagicMock type annotations to all mock parameters
 """
 
 import sys
@@ -19,7 +20,7 @@ from netcheck import parse_arguments, main
 class TestParseArguments:
     """Tests for parse_arguments function."""
 
-    def test_no_arguments(self, monkeypatch) -> None:
+    def test_no_arguments(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test default behavior with no arguments."""
         monkeypatch.setattr(sys, "argv", ["netcheck"])
 
@@ -30,7 +31,7 @@ class TestParseArguments:
         assert args.export is None
         assert args.output is None
 
-    def test_verbose_flag(self, monkeypatch) -> None:
+    def test_verbose_flag(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test --verbose flag."""
         monkeypatch.setattr(sys, "argv", ["netcheck", "--verbose"])
 
@@ -38,7 +39,7 @@ class TestParseArguments:
 
         assert args.verbose is True
 
-    def test_verbose_short_flag(self, monkeypatch) -> None:
+    def test_verbose_short_flag(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test -v flag."""
         monkeypatch.setattr(sys, "argv", ["netcheck", "-v"])
 
@@ -46,7 +47,7 @@ class TestParseArguments:
 
         assert args.verbose is True
 
-    def test_log_file(self, monkeypatch) -> None:
+    def test_log_file(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test --log-file argument."""
         monkeypatch.setattr(sys, "argv", ["netcheck", "--log-file", "debug.log"])
 
@@ -54,7 +55,7 @@ class TestParseArguments:
 
         assert args.log_file == Path("debug.log")
 
-    def test_export_json(self, monkeypatch) -> None:
+    def test_export_json(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test --export json."""
         monkeypatch.setattr(sys, "argv", ["netcheck", "--export", "json"])
 
@@ -62,7 +63,7 @@ class TestParseArguments:
 
         assert args.export == "json"
 
-    def test_output_file(self, monkeypatch) -> None:
+    def test_output_file(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test --output argument."""
         monkeypatch.setattr(sys, "argv", ["netcheck", "--export", "json", "--output", "report.json"])
 
@@ -71,7 +72,7 @@ class TestParseArguments:
         assert args.export == "json"
         assert args.output == Path("report.json")
 
-    def test_output_without_export_exits(self, monkeypatch) -> None:
+    def test_output_without_export_exits(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test --output without --export exits with code 4."""
         monkeypatch.setattr(sys, "argv", ["netcheck", "--output", "report.json"])
 
@@ -80,7 +81,7 @@ class TestParseArguments:
 
         assert exc_info.value.code == ExitCode.INVALID_ARGUMENTS
 
-    def test_combined_flags(self, monkeypatch) -> None:
+    def test_combined_flags(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test combining multiple flags."""
         monkeypatch.setattr(
             sys,
@@ -95,7 +96,7 @@ class TestParseArguments:
         assert args.export == "json"
         assert args.output == Path("out.json")
 
-    def test_help_flag_exits(self, monkeypatch) -> None:
+    def test_help_flag_exits(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test --help flag exits (argparse behavior)."""
         monkeypatch.setattr(sys, "argv", ["netcheck", "--help"])
 
@@ -115,12 +116,12 @@ class TestMain:
     @patch("netcheck.parse_arguments")
     def test_main_basic_success(
         self,
-        mock_parse,
-        mock_setup_logging,
-        mock_check_deps,
-        mock_collect,
-        mock_format,
-    ):
+        mock_parse: MagicMock,
+        mock_setup_logging: MagicMock,
+        mock_check_deps: MagicMock,
+        mock_collect: MagicMock,
+        mock_format: MagicMock,
+    ) -> None:
         """Test basic successful execution."""
         # Setup mocks
         mock_args = Mock()
@@ -158,10 +159,10 @@ class TestMain:
     @patch("netcheck.parse_arguments")
     def test_main_missing_dependencies(
         self,
-        mock_parse,
-        mock_setup_logging,
-        mock_check_deps,
-    ):
+        mock_parse: MagicMock,
+        mock_setup_logging: MagicMock,
+        mock_check_deps: MagicMock,
+    ) -> None:
         """Test exit when dependencies missing."""
         mock_args = Mock()
         mock_args.verbose = False
@@ -181,11 +182,11 @@ class TestMain:
     @patch("netcheck.parse_arguments")
     def test_main_no_interfaces_found(
         self,
-        mock_parse,
-        mock_setup_logging,
-        mock_check_deps,
-        mock_collect,
-    ):
+        mock_parse: MagicMock,
+        mock_setup_logging: MagicMock,
+        mock_check_deps: MagicMock,
+        mock_collect: MagicMock,
+    ) -> None:
         """Test exit when no interfaces found."""
         mock_args = Mock()
         mock_args.verbose = False
@@ -207,13 +208,13 @@ class TestMain:
     @patch("netcheck.parse_arguments")
     def test_main_export_json_stdout(
         self,
-        mock_parse,
-        mock_setup_logging,
-        mock_check_deps,
-        mock_collect,
-        mock_export,
-        capsys,
-    ):
+        mock_parse: MagicMock,
+        mock_setup_logging: MagicMock,
+        mock_check_deps: MagicMock,
+        mock_collect: MagicMock,
+        mock_export: MagicMock,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
         """Test JSON export to stdout."""
         mock_args = Mock()
         mock_args.verbose = False
@@ -244,13 +245,13 @@ class TestMain:
     @patch("netcheck.parse_arguments")
     def test_main_export_json_file(
         self,
-        mock_parse,
-        mock_setup_logging,
-        mock_check_deps,
-        mock_collect,
-        mock_export,
-        tmp_path,
-    ):
+        mock_parse: MagicMock,
+        mock_setup_logging: MagicMock,
+        mock_check_deps: MagicMock,
+        mock_collect: MagicMock,
+        mock_export: MagicMock,
+        tmp_path: Path,
+    ) -> None:
         """Test JSON export to file."""
         output_file = tmp_path / "report.json"
 
@@ -282,13 +283,13 @@ class TestMain:
     @patch("netcheck.parse_arguments")
     def test_main_verbose_with_log_file(
         self,
-        mock_parse,
-        mock_setup_logging,
-        mock_check_deps,
-        mock_collect,
-        mock_format,
-        tmp_path,
-    ):
+        mock_parse: MagicMock,
+        mock_setup_logging: MagicMock,
+        mock_check_deps: MagicMock,
+        mock_collect: MagicMock,
+        mock_format: MagicMock,
+        tmp_path: Path,
+    ) -> None:
         """Test verbose mode with log file includes table in log."""
         log_file = tmp_path / "debug.log"
 
@@ -322,11 +323,11 @@ class TestMain:
     @patch("netcheck.parse_arguments")
     def test_main_keyboard_interrupt(
         self,
-        mock_parse,
-        mock_setup_logging,
-        mock_check_deps,
-        mock_collect,
-    ):
+        mock_parse: MagicMock,
+        mock_setup_logging: MagicMock,
+        mock_check_deps: MagicMock,
+        mock_collect: MagicMock,
+    ) -> None:
         """Test KeyboardInterrupt handling."""
         mock_args = Mock()
         mock_args.verbose = False
@@ -353,12 +354,12 @@ class TestMain:
     ])
     def test_main_exception_handling(
         self,
-        mock_parse,
-        mock_setup_logging,
-        mock_check_deps,
-        mock_collect,
-        exception_type,
-    ):
+        mock_parse: MagicMock,
+        mock_setup_logging: MagicMock,
+        mock_check_deps: MagicMock,
+        mock_collect: MagicMock,
+        exception_type: type[Exception],
+    ) -> None:
         """Test exception handling for various error types."""
         mock_args = Mock()
         mock_args.verbose = False
@@ -380,12 +381,12 @@ class TestMain:
     @patch("netcheck.parse_arguments")
     def test_main_verbose_exception_prints_traceback(
         self,
-        mock_parse,
-        mock_setup_logging,
-        mock_check_deps,
-        mock_collect,
-        mock_traceback,
-    ):
+        mock_parse: MagicMock,
+        mock_setup_logging: MagicMock,
+        mock_check_deps: MagicMock,
+        mock_collect: MagicMock,
+        mock_traceback: MagicMock,
+    ) -> None:
         """Test verbose mode prints traceback on exception."""
         mock_args = Mock()
         mock_args.verbose = True
@@ -408,12 +409,12 @@ class TestMain:
     @patch("netcheck.parse_arguments")
     def test_main_multiple_interfaces(
         self,
-        mock_parse,
-        mock_setup_logging,
-        mock_check_deps,
-        mock_collect,
-        mock_format,
-    ):
+        mock_parse: MagicMock,
+        mock_setup_logging: MagicMock,
+        mock_check_deps: MagicMock,
+        mock_collect: MagicMock,
+        mock_format: MagicMock,
+    ) -> None:
         """Test with multiple interfaces."""
         mock_args = Mock()
         mock_args.verbose = False
@@ -450,7 +451,7 @@ class TestMainIntegration:
         not Path("/sys/class/net/lo").exists(),
         reason="Requires real Linux system"
     )
-    def test_main_real_system(self, monkeypatch, capsys) -> None:
+    def test_main_real_system(self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
         """Test main on real system (integration test).
 
         This test runs the actual netcheck tool on real hardware.
@@ -471,7 +472,7 @@ class TestMainIntegration:
         assert "lo" in captured.out  # Loopback always present
 
     @pytest.mark.integration
-    def test_main_json_export_real(self, monkeypatch, tmp_path, capsys) -> None:
+    def test_main_json_export_real(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
         """Test JSON export on real system (integration test)."""
         output_file = tmp_path / "test_report.json"
 

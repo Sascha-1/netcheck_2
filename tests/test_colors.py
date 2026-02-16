@@ -32,7 +32,8 @@ class TestColorEnum:
         assert Color.RED.startswith("\033[")
         assert Color.YELLOW.startswith("\033[")
         assert Color.MAGENTA.startswith("\033[")
-        assert Color.RESET.value == "\033[0m"
+        # FIXED: Changed from Color.RESET.value to just Color.RESET (comparison-overlap)
+        assert str(Color.RESET) == "\033[0m"
 
     def test_color_values_are_strings(self) -> None:
         """Test all color values are strings."""
@@ -141,7 +142,7 @@ class TestColorUsage:
         Color.YELLOW,
         Color.MAGENTA,
     ])
-    def test_all_active_colors_work(self, color) -> None:
+    def test_all_active_colors_work(self, color: str) -> None:
         """Test all active colors can be used."""
         result = color + "test" + Color.RESET
         assert result.startswith("\033[")
@@ -164,7 +165,8 @@ class TestColorUsage:
 
     def test_reset_clears_color(self) -> None:
         """Test RESET code is correct."""
-        assert Color.RESET.value == "\033[0m"
+        # FIXED: Changed from Color.RESET.value to str(Color.RESET) (comparison-overlap)
+        assert str(Color.RESET) == "\033[0m"
 
     def test_color_values_unique(self) -> None:
         """Test each active color has a unique ANSI code."""
