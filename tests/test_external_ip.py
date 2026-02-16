@@ -20,7 +20,7 @@ from network.external_ip import (
 class TestValidateApiResponse:
     """Tests for validate_api_response function."""
 
-    def test_valid_response(self):
+    def test_valid_response(self) -> None:
         """Test valid response passes validation."""
         data = {
             "ip": "203.0.113.1",
@@ -29,7 +29,7 @@ class TestValidateApiResponse:
         }
         assert validate_api_response(data, "IPv4") is True
 
-    def test_missing_ip(self):
+    def test_missing_ip(self) -> None:
         """Test missing IP field fails validation."""
         data = {
             "org": "AS12345 Example ISP",
@@ -37,7 +37,7 @@ class TestValidateApiResponse:
         }
         assert validate_api_response(data, "IPv4") is False
 
-    def test_missing_org(self):
+    def test_missing_org(self) -> None:
         """Test missing org field fails validation."""
         data = {
             "ip": "203.0.113.1",
@@ -45,7 +45,7 @@ class TestValidateApiResponse:
         }
         assert validate_api_response(data, "IPv4") is False
 
-    def test_missing_country(self):
+    def test_missing_country(self) -> None:
         """Test missing country field fails validation."""
         data = {
             "ip": "203.0.113.1",
@@ -53,7 +53,7 @@ class TestValidateApiResponse:
         }
         assert validate_api_response(data, "IPv4") is False
 
-    def test_empty_values(self):
+    def test_empty_values(self) -> None:
         """Test empty values fail validation."""
         data = {
             "ip": "",
@@ -67,7 +67,7 @@ class TestGetWithRetry:
     """Tests for get_with_retry function."""
 
     @patch("requests.get")
-    def test_successful_first_attempt(self, mock_get):
+    def test_successful_first_attempt(self, mock_get) -> None:
         """Test successful request on first attempt."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -80,7 +80,7 @@ class TestGetWithRetry:
 
     @patch("time.sleep")
     @patch("requests.get")
-    def test_retry_on_failure(self, mock_get, mock_sleep):
+    def test_retry_on_failure(self, mock_get, mock_sleep) -> None:
         """Test retry on failure."""
         # Fail twice, succeed on third
         mock_get.side_effect = [
@@ -97,7 +97,7 @@ class TestGetWithRetry:
 
     @patch("time.sleep")
     @patch("requests.get")
-    def test_all_attempts_fail(self, mock_get, mock_sleep):
+    def test_all_attempts_fail(self, mock_get, mock_sleep) -> None:
         """Test returns None when all attempts fail."""
         mock_get.side_effect = requests.RequestException("error")
 
@@ -107,7 +107,7 @@ class TestGetWithRetry:
         assert mock_get.call_count == 3  # Default retry count
 
     @patch("requests.get")
-    def test_http_error_raises(self, mock_get):
+    def test_http_error_raises(self, mock_get) -> None:
         """Test HTTP errors trigger retry."""
         mock_response = Mock()
         mock_response.raise_for_status.side_effect = requests.HTTPError()
@@ -122,7 +122,7 @@ class TestGetIpv6SingleAttempt:
     """Tests for get_ipv6_single_attempt function."""
 
     @patch("requests.get")
-    def test_successful_request(self, mock_get):
+    def test_successful_request(self, mock_get) -> None:
         """Test successful IPv6 request."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -134,7 +134,7 @@ class TestGetIpv6SingleAttempt:
         assert mock_get.call_count == 1
 
     @patch("requests.get")
-    def test_single_attempt_only(self, mock_get):
+    def test_single_attempt_only(self, mock_get) -> None:
         """Test only one attempt is made on failure."""
         mock_get.side_effect = requests.RequestException("error")
 
@@ -149,7 +149,7 @@ class TestGetEgressInfo:
 
     @patch("network.external_ip.get_ipv6_single_attempt")
     @patch("network.external_ip.get_with_retry")
-    def test_successful_ipv4_and_ipv6(self, mock_ipv4, mock_ipv6):
+    def test_successful_ipv4_and_ipv6(self, mock_ipv4, mock_ipv6) -> None:
         """Test successful query with both IPv4 and IPv6."""
         # Setup IPv4 response
         ipv4_response = Mock()
@@ -176,7 +176,7 @@ class TestGetEgressInfo:
 
     @patch("network.external_ip.get_ipv6_single_attempt")
     @patch("network.external_ip.get_with_retry")
-    def test_ipv4_only(self, mock_ipv4, mock_ipv6):
+    def test_ipv4_only(self, mock_ipv4, mock_ipv6) -> None:
         """Test successful IPv4 but no IPv6."""
         ipv4_response = Mock()
         ipv4_response.json.return_value = {
@@ -194,7 +194,7 @@ class TestGetEgressInfo:
         assert result.isp == "AS12345 Example ISP"
 
     @patch("network.external_ip.get_with_retry")
-    def test_ipv4_failure(self, mock_ipv4):
+    def test_ipv4_failure(self, mock_ipv4) -> None:
         """Test IPv4 query failure returns error object."""
         mock_ipv4.return_value = None
 
@@ -206,7 +206,7 @@ class TestGetEgressInfo:
         assert result.country == "QUERY FAILED"
 
     @patch("network.external_ip.get_with_retry")
-    def test_invalid_json(self, mock_ipv4):
+    def test_invalid_json(self, mock_ipv4) -> None:
         """Test invalid JSON returns error object."""
         ipv4_response = Mock()
         ipv4_response.json.side_effect = json.JSONDecodeError("error", "", 0)
@@ -218,7 +218,7 @@ class TestGetEgressInfo:
 
     @patch("network.external_ip.get_ipv6_single_attempt")
     @patch("network.external_ip.get_with_retry")
-    def test_missing_required_fields(self, mock_ipv4, mock_ipv6):
+    def test_missing_required_fields(self, mock_ipv4, mock_ipv6) -> None:
         """Test missing required fields returns error object."""
         ipv4_response = Mock()
         ipv4_response.json.return_value = {
@@ -233,7 +233,7 @@ class TestGetEgressInfo:
 
     @patch("network.external_ip.get_ipv6_single_attempt")
     @patch("network.external_ip.get_with_retry")
-    def test_ipv6_json_decode_error(self, mock_ipv4, mock_ipv6):
+    def test_ipv6_json_decode_error(self, mock_ipv4, mock_ipv6) -> None:
         """Test IPv6 JSON decode error falls back to N/A."""
         ipv4_response = Mock()
         ipv4_response.json.return_value = {

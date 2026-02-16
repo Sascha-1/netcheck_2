@@ -23,27 +23,27 @@ from network.dns import (
 class TestExtractIpsFromText:
     """Tests for _extract_ips_from_text function."""
 
-    def test_extract_ipv4(self):
+    def test_extract_ipv4(self) -> None:
         """Test IPv4 extraction."""
         text = "DNS Servers: 8.8.8.8 1.1.1.1"
         ips = _extract_ips_from_text(text)
         assert "8.8.8.8" in ips
         assert "1.1.1.1" in ips
 
-    def test_extract_ipv6(self):
+    def test_extract_ipv6(self) -> None:
         """Test IPv6 extraction."""
         text = "DNS Servers: 2001:db8::1"
         ips = _extract_ips_from_text(text)
         assert "2001:db8::1" in ips
 
-    def test_extract_mixed(self):
+    def test_extract_mixed(self) -> None:
         """Test mixed IPv4 and IPv6."""
         text = "DNS: 8.8.8.8 2001:db8::1"
         ips = _extract_ips_from_text(text)
         assert "8.8.8.8" in ips
         assert "2001:db8::1" in ips
 
-    def test_no_ips(self):
+    def test_no_ips(self) -> None:
         """Test no IPs returns empty list."""
         text = "No DNS servers configured"
         ips = _extract_ips_from_text(text)
@@ -53,7 +53,7 @@ class TestExtractIpsFromText:
 class TestParseDnsSection:
     """Tests for _parse_dns_section function."""
 
-    def test_parse_single_line(self):
+    def test_parse_single_line(self) -> None:
         """Test parsing DNS on single line."""
         lines = [
             "Link 2 (eth0)",
@@ -62,7 +62,7 @@ class TestParseDnsSection:
         dns = _parse_dns_section(lines)
         assert "8.8.8.8" in dns
 
-    def test_parse_multiple_lines(self):
+    def test_parse_multiple_lines(self) -> None:
         """Test parsing DNS across multiple lines."""
         lines = [
             "Link 2 (eth0)",
@@ -73,7 +73,7 @@ class TestParseDnsSection:
         assert "8.8.8.8" in dns
         assert "1.1.1.1" in dns
 
-    def test_stop_at_next_section(self):
+    def test_stop_at_next_section(self) -> None:
         """Test parsing stops at next section."""
         lines = [
             "DNS Servers: 8.8.8.8",
@@ -88,7 +88,7 @@ class TestParseDnsSection:
 class TestExtractCurrentDns:
     """Tests for _extract_current_dns function."""
 
-    def test_extract_current(self):
+    def test_extract_current(self) -> None:
         """Test extracting current DNS server."""
         lines = [
             "Link 2 (eth0)",
@@ -97,7 +97,7 @@ class TestExtractCurrentDns:
         current = _extract_current_dns(lines)
         assert current == "8.8.8.8"
 
-    def test_no_current(self):
+    def test_no_current(self) -> None:
         """Test no current DNS returns None."""
         lines = [
             "Link 2 (eth0)",
@@ -111,7 +111,7 @@ class TestGetInterfaceDns:
     """Tests for get_interface_dns function."""
 
     @patch("network.dns.run_command")
-    def test_successful_query(self, mock_run):
+    def test_successful_query(self, mock_run) -> None:
         """Test successful DNS query."""
         mock_run.return_value = """Link 2 (eth0)
     Current Scopes: DNS
@@ -127,7 +127,7 @@ class TestGetInterfaceDns:
         assert current == "8.8.8.8"
 
     @patch("network.dns.run_command")
-    def test_command_failure(self, mock_run):
+    def test_command_failure(self, mock_run) -> None:
         """Test command failure returns empty."""
         mock_run.return_value = None
 
@@ -140,7 +140,7 @@ class TestGetInterfaceDns:
 class TestCollectDnsServersByCategory:
     """Tests for collect_dns_servers_by_category function."""
 
-    def test_categorize_vpn_dns(self):
+    def test_categorize_vpn_dns(self) -> None:
         """Test VPN DNS is categorized correctly."""
         interfaces = [
             InterfaceInfo.create_empty("tun0"),
@@ -157,7 +157,7 @@ class TestCollectDnsServersByCategory:
         assert "10.8.0.1" in vpn_dns
         assert len(isp_dns) == 0
 
-    def test_categorize_isp_dns(self):
+    def test_categorize_isp_dns(self) -> None:
         """Test ISP DNS is categorized correctly."""
         interfaces = [
             InterfaceInfo.create_empty("eth0"),
@@ -174,7 +174,7 @@ class TestCollectDnsServersByCategory:
         assert "192.168.1.1" in isp_dns
         assert len(vpn_dns) == 0
 
-    def test_deduplication(self):
+    def test_deduplication(self) -> None:
         """Test duplicate DNS servers are deduplicated."""
         interfaces = [
             InterfaceInfo.create_empty("eth0"),
@@ -197,7 +197,7 @@ class TestCollectDnsServersByCategory:
 class TestDetectDnsLeak:
     """Tests for detect_dns_leak function."""
 
-    def test_no_vpn_active(self):
+    def test_no_vpn_active(self) -> None:
         """Test returns NOT_APPLICABLE when no VPN active."""
         result = detect_dns_leak(
             "eth0",
@@ -209,7 +209,7 @@ class TestDetectDnsLeak:
         )
         assert result == DnsLeakStatus.NOT_APPLICABLE.value
 
-    def test_no_configured_dns(self):
+    def test_no_configured_dns(self) -> None:
         """Test returns NOT_APPLICABLE when no DNS configured."""
         result = detect_dns_leak(
             "eth0",
@@ -221,7 +221,7 @@ class TestDetectDnsLeak:
         )
         assert result == DnsLeakStatus.NOT_APPLICABLE.value
 
-    def test_isp_dns_leak(self):
+    def test_isp_dns_leak(self) -> None:
         """Test detects ISP DNS leak."""
         result = detect_dns_leak(
             "eth0",
@@ -233,7 +233,7 @@ class TestDetectDnsLeak:
         )
         assert result == DnsLeakStatus.LEAK.value
 
-    def test_vpn_dns_ok(self):
+    def test_vpn_dns_ok(self) -> None:
         """Test VPN DNS is OK."""
         result = detect_dns_leak(
             "tun0",
@@ -245,7 +245,7 @@ class TestDetectDnsLeak:
         )
         assert result == DnsLeakStatus.OK.value
 
-    def test_public_dns(self):
+    def test_public_dns(self) -> None:
         """Test public DNS detection."""
         result = detect_dns_leak(
             "eth0",
@@ -257,7 +257,7 @@ class TestDetectDnsLeak:
         )
         assert result == DnsLeakStatus.PUBLIC.value
 
-    def test_unknown_dns_warn(self):
+    def test_unknown_dns_warn(self) -> None:
         """Test unknown DNS triggers warning."""
         result = detect_dns_leak(
             "eth0",
@@ -273,7 +273,7 @@ class TestDetectDnsLeak:
 class TestCheckDnsLeaksAllInterfaces:
     """Tests for check_dns_leaks_all_interfaces function."""
 
-    def test_updates_leak_status(self):
+    def test_updates_leak_status(self) -> None:
         """Test leak status is updated in-place."""
         interfaces = [
             InterfaceInfo.create_empty("tun0"),

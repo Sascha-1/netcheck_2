@@ -19,7 +19,7 @@ from netcheck import parse_arguments, main
 class TestParseArguments:
     """Tests for parse_arguments function."""
 
-    def test_no_arguments(self, monkeypatch):
+    def test_no_arguments(self, monkeypatch) -> None:
         """Test default behavior with no arguments."""
         monkeypatch.setattr(sys, "argv", ["netcheck"])
 
@@ -30,7 +30,7 @@ class TestParseArguments:
         assert args.export is None
         assert args.output is None
 
-    def test_verbose_flag(self, monkeypatch):
+    def test_verbose_flag(self, monkeypatch) -> None:
         """Test --verbose flag."""
         monkeypatch.setattr(sys, "argv", ["netcheck", "--verbose"])
 
@@ -38,7 +38,7 @@ class TestParseArguments:
 
         assert args.verbose is True
 
-    def test_verbose_short_flag(self, monkeypatch):
+    def test_verbose_short_flag(self, monkeypatch) -> None:
         """Test -v flag."""
         monkeypatch.setattr(sys, "argv", ["netcheck", "-v"])
 
@@ -46,7 +46,7 @@ class TestParseArguments:
 
         assert args.verbose is True
 
-    def test_log_file(self, monkeypatch):
+    def test_log_file(self, monkeypatch) -> None:
         """Test --log-file argument."""
         monkeypatch.setattr(sys, "argv", ["netcheck", "--log-file", "debug.log"])
 
@@ -54,7 +54,7 @@ class TestParseArguments:
 
         assert args.log_file == Path("debug.log")
 
-    def test_export_json(self, monkeypatch):
+    def test_export_json(self, monkeypatch) -> None:
         """Test --export json."""
         monkeypatch.setattr(sys, "argv", ["netcheck", "--export", "json"])
 
@@ -62,7 +62,7 @@ class TestParseArguments:
 
         assert args.export == "json"
 
-    def test_output_file(self, monkeypatch):
+    def test_output_file(self, monkeypatch) -> None:
         """Test --output argument."""
         monkeypatch.setattr(sys, "argv", ["netcheck", "--export", "json", "--output", "report.json"])
 
@@ -71,7 +71,7 @@ class TestParseArguments:
         assert args.export == "json"
         assert args.output == Path("report.json")
 
-    def test_output_without_export_exits(self, monkeypatch):
+    def test_output_without_export_exits(self, monkeypatch) -> None:
         """Test --output without --export exits with code 4."""
         monkeypatch.setattr(sys, "argv", ["netcheck", "--output", "report.json"])
 
@@ -80,7 +80,7 @@ class TestParseArguments:
 
         assert exc_info.value.code == ExitCode.INVALID_ARGUMENTS
 
-    def test_combined_flags(self, monkeypatch):
+    def test_combined_flags(self, monkeypatch) -> None:
         """Test combining multiple flags."""
         monkeypatch.setattr(
             sys,
@@ -95,7 +95,7 @@ class TestParseArguments:
         assert args.export == "json"
         assert args.output == Path("out.json")
 
-    def test_help_flag_exits(self, monkeypatch):
+    def test_help_flag_exits(self, monkeypatch) -> None:
         """Test --help flag exits (argparse behavior)."""
         monkeypatch.setattr(sys, "argv", ["netcheck", "--help"])
 
@@ -450,7 +450,7 @@ class TestMainIntegration:
         not Path("/sys/class/net/lo").exists(),
         reason="Requires real Linux system"
     )
-    def test_main_real_system(self, monkeypatch, capsys):
+    def test_main_real_system(self, monkeypatch, capsys) -> None:
         """Test main on real system (integration test).
 
         This test runs the actual netcheck tool on real hardware.
@@ -471,7 +471,7 @@ class TestMainIntegration:
         assert "lo" in captured.out  # Loopback always present
 
     @pytest.mark.integration
-    def test_main_json_export_real(self, monkeypatch, tmp_path, capsys):
+    def test_main_json_export_real(self, monkeypatch, tmp_path, capsys) -> None:
         """Test JSON export on real system (integration test)."""
         output_file = tmp_path / "test_report.json"
 

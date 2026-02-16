@@ -19,7 +19,7 @@ from models import (
 class TestInterfaceType:
     """Tests for InterfaceType enum."""
 
-    def test_all_types_defined(self):
+    def test_all_types_defined(self) -> None:
         """Test all interface types are defined."""
         assert InterfaceType.LOOPBACK == "loopback"
         assert InterfaceType.ETHERNET == "ethernet"
@@ -31,7 +31,7 @@ class TestInterfaceType:
         assert InterfaceType.BRIDGE == "bridge"
         assert InterfaceType.UNKNOWN == "unknown"
 
-    def test_enum_values_are_strings(self):
+    def test_enum_values_are_strings(self) -> None:
         """Test enum values are strings."""
         assert isinstance(InterfaceType.ETHERNET.value, str)
 
@@ -39,7 +39,7 @@ class TestInterfaceType:
 class TestDnsLeakStatus:
     """Tests for DnsLeakStatus enum."""
 
-    def test_all_statuses_defined(self):
+    def test_all_statuses_defined(self) -> None:
         """Test all DNS leak statuses are defined."""
         assert DnsLeakStatus.OK == "OK"
         assert DnsLeakStatus.PUBLIC == "PUBLIC"
@@ -51,7 +51,7 @@ class TestDnsLeakStatus:
 class TestDataMarker:
     """Tests for DataMarker enum."""
 
-    def test_all_markers_defined(self):
+    def test_all_markers_defined(self) -> None:
         """Test all data markers are defined."""
         assert DataMarker.NOT_APPLICABLE == "--"
         assert DataMarker.NOT_AVAILABLE == "N/A"
@@ -63,13 +63,13 @@ class TestDataMarker:
 class TestIPConfig:
     """Tests for IPConfig dataclass."""
 
-    def test_create_basic(self):
+    def test_create_basic(self) -> None:
         """Test basic IPConfig creation."""
         config = IPConfig(ipv4="192.168.1.1", ipv6="2001:db8::1")
         assert config.ipv4 == "192.168.1.1"
         assert config.ipv6 == "2001:db8::1"
 
-    def test_create_empty(self):
+    def test_create_empty(self) -> None:
         """Test create_empty factory method."""
         config = IPConfig.create_empty()
         assert config.ipv4 == "N/A"
@@ -79,7 +79,7 @@ class TestIPConfig:
 class TestDNSConfig:
     """Tests for DNSConfig dataclass."""
 
-    def test_create_basic(self):
+    def test_create_basic(self) -> None:
         """Test basic DNSConfig creation."""
         config = DNSConfig(
             servers=["8.8.8.8", "1.1.1.1"],
@@ -90,7 +90,7 @@ class TestDNSConfig:
         assert config.current_server == "8.8.8.8"
         assert config.leak_status == DnsLeakStatus.OK
 
-    def test_create_empty(self):
+    def test_create_empty(self) -> None:
         """Test create_empty factory method."""
         config = DNSConfig.create_empty()
         assert config.servers == []
@@ -101,13 +101,13 @@ class TestDNSConfig:
 class TestRoutingInfo:
     """Tests for RoutingInfo dataclass."""
 
-    def test_create_basic(self):
+    def test_create_basic(self) -> None:
         """Test basic RoutingInfo creation."""
         info = RoutingInfo(gateway="192.168.1.1", metric="100")
         assert info.gateway == "192.168.1.1"
         assert info.metric == "100"
 
-    def test_create_empty(self):
+    def test_create_empty(self) -> None:
         """Test create_empty factory method."""
         info = RoutingInfo.create_empty()
         assert info.gateway == "NONE"
@@ -117,13 +117,13 @@ class TestRoutingInfo:
 class TestVPNInfo:
     """Tests for VPNInfo dataclass."""
 
-    def test_create_basic(self):
+    def test_create_basic(self) -> None:
         """Test basic VPNInfo creation."""
         info = VPNInfo(server_ip="198.51.100.1", carries_vpn=True)
         assert info.server_ip == "198.51.100.1"
         assert info.carries_vpn is True
 
-    def test_create_empty(self):
+    def test_create_empty(self) -> None:
         """Test create_empty factory method."""
         info = VPNInfo.create_empty()
         assert info.server_ip is None
@@ -133,7 +133,7 @@ class TestVPNInfo:
 class TestEgressInfo:
     """Tests for EgressInfo dataclass."""
 
-    def test_create_basic(self):
+    def test_create_basic(self) -> None:
         """Test basic EgressInfo creation."""
         info = EgressInfo(
             external_ip="203.0.113.1",
@@ -146,7 +146,7 @@ class TestEgressInfo:
         assert info.isp == "AS12345 Example ISP"
         assert info.country == "US"
 
-    def test_create_error(self):
+    def test_create_error(self) -> None:
         """Test create_error factory method."""
         info = EgressInfo.create_error()
         assert info.external_ip == "QUERY FAILED"
@@ -154,7 +154,7 @@ class TestEgressInfo:
         assert info.isp == "QUERY FAILED"
         assert info.country == "QUERY FAILED"
 
-    def test_create_empty(self):
+    def test_create_empty(self) -> None:
         """Test create_empty factory method."""
         info = EgressInfo.create_empty()
         assert info.external_ip == "--"
@@ -166,7 +166,7 @@ class TestEgressInfo:
 class TestInterfaceInfo:
     """Tests for InterfaceInfo dataclass."""
 
-    def test_create_basic(self):
+    def test_create_basic(self) -> None:
         """Test basic InterfaceInfo creation."""
         iface = InterfaceInfo(
             name="eth0",
@@ -182,7 +182,7 @@ class TestInterfaceInfo:
         assert iface.interface_type == InterfaceType.ETHERNET
         assert iface.device == "Intel I225-V"
 
-    def test_create_empty(self):
+    def test_create_empty(self) -> None:
         """Test create_empty factory method."""
         iface = InterfaceInfo.create_empty("wlan0")
         assert iface.name == "wlan0"
@@ -195,7 +195,7 @@ class TestInterfaceInfo:
         assert iface.routing.gateway == "NONE"
         assert iface.vpn.server_ip is None
 
-    def test_complete_interface(self):
+    def test_complete_interface(self) -> None:
         """Test complete interface with all fields populated."""
         iface = InterfaceInfo(
             name="tun0",

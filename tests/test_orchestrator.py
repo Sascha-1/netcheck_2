@@ -23,7 +23,7 @@ class TestCheckDependencies:
     """Tests for check_dependencies function."""
 
     @patch("orchestrator.command_exists")
-    def test_all_dependencies_present(self, mock_exists):
+    def test_all_dependencies_present(self, mock_exists) -> None:
         """Test when all required commands exist."""
         mock_exists.return_value = True
 
@@ -34,7 +34,7 @@ class TestCheckDependencies:
         assert mock_exists.call_count == len(REQUIRED_COMMANDS)
 
     @patch("orchestrator.command_exists")
-    def test_missing_single_dependency(self, mock_exists, caplog):
+    def test_missing_single_dependency(self, mock_exists, caplog) -> None:
         """Test when one required command is missing."""
         # All exist except 'resolvectl'
         mock_exists.side_effect = lambda cmd: cmd != "resolvectl"
@@ -47,7 +47,7 @@ class TestCheckDependencies:
         assert "sudo apt install systemd-resolved" in caplog.text
 
     @patch("orchestrator.command_exists")
-    def test_missing_multiple_dependencies(self, mock_exists, caplog):
+    def test_missing_multiple_dependencies(self, mock_exists, caplog) -> None:
         """Test when multiple commands are missing."""
         # Only 'ip' and 'ss' are missing
         mock_exists.side_effect = lambda cmd: cmd not in ["ip", "ss"]
@@ -69,7 +69,7 @@ class TestCheckDependencies:
         ("ss", "iproute2"),
         ("mmcli", "modemmanager"),
     ])
-    def test_specific_install_hints(self, mock_exists, missing_cmd, expected_hint, caplog):
+    def test_specific_install_hints(self, mock_exists, missing_cmd, expected_hint, caplog) -> None:
         """Test install hints for each command."""
         mock_exists.side_effect = lambda cmd: cmd != missing_cmd
 
@@ -80,7 +80,7 @@ class TestCheckDependencies:
         assert expected_hint in caplog.text
 
     @patch("orchestrator.command_exists")
-    def test_all_dependencies_missing(self, mock_exists, caplog):
+    def test_all_dependencies_missing(self, mock_exists, caplog) -> None:
         """Test when all required commands are missing."""
         mock_exists.return_value = False
 
@@ -369,7 +369,7 @@ class TestCollectNetworkData:
         assert mock_process.call_count == 4
 
     @patch("orchestrator.get_interface_list")
-    def test_collect_with_no_interfaces(self, mock_list):
+    def test_collect_with_no_interfaces(self, mock_list) -> None:
         """Test collecting data when no interfaces found."""
         mock_list.return_value = []
 
@@ -379,7 +379,7 @@ class TestCollectNetworkData:
 
     @patch("orchestrator.get_interface_list")
     @patch("orchestrator.get_active_interface")
-    def test_collect_with_no_active_interface(self, mock_active, mock_list, caplog):
+    def test_collect_with_no_active_interface(self, mock_active, mock_list, caplog) -> None:
         """Test collecting data when no active interface (no default route)."""
         # FIXED: Set log level to INFO to capture logger.info() messages
         import logging
@@ -547,7 +547,7 @@ class TestCollectNetworkDataIntegration:
         not Path("/sys/class/net/lo").exists(),
         reason="Requires real Linux system"
     )
-    def test_collect_real_loopback(self):
+    def test_collect_real_loopback(self) -> None:
         """Test collecting real loopback interface (integration test).
 
         This test runs on real system hardware.

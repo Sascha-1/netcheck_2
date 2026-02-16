@@ -3,8 +3,10 @@
 Provides common test fixtures and configuration for the test suite.
 """
 
+import logging
 import sys
 from pathlib import Path
+from typing import Generator
 
 import pytest
 
@@ -27,7 +29,7 @@ from models import (
 # Configure logging once for entire test session
 # This prevents logging handler MagicMock errors
 @pytest.fixture(scope="session", autouse=True)
-def configure_logging():
+def configure_logging() -> Generator[None, None, None]:
     """Configure logging for all tests.
     
     This ensures all loggers have properly initialized handlers with integer
@@ -41,7 +43,7 @@ def configure_logging():
 
 
 @pytest.fixture
-def sample_ethernet_interface():
+def sample_ethernet_interface() -> InterfaceInfo:
     """Create a sample ethernet interface for testing."""
     return InterfaceInfo(
         name="eth0",
@@ -65,7 +67,7 @@ def sample_ethernet_interface():
 
 
 @pytest.fixture
-def sample_vpn_interface():
+def sample_vpn_interface() -> InterfaceInfo:
     """Create a sample VPN interface for testing."""
     return InterfaceInfo(
         name="tun0",
@@ -89,7 +91,7 @@ def sample_vpn_interface():
 
 
 @pytest.fixture
-def sample_wireless_interface():
+def sample_wireless_interface() -> InterfaceInfo:
     """Create a sample wireless interface for testing."""
     return InterfaceInfo(
         name="wlan0",
@@ -104,7 +106,7 @@ def sample_wireless_interface():
 
 
 @pytest.fixture
-def sample_cellular_interface():
+def sample_cellular_interface() -> InterfaceInfo:
     """Create a sample cellular interface for testing."""
     return InterfaceInfo(
         name="wwp0s0",
@@ -123,7 +125,7 @@ def sample_cellular_interface():
 
 
 @pytest.fixture
-def sample_tether_interface():
+def sample_tether_interface() -> InterfaceInfo:
     """Create a sample USB tether interface for testing."""
     return InterfaceInfo(
         name="enxb2707db29505",
@@ -138,7 +140,7 @@ def sample_tether_interface():
 
 
 @pytest.fixture
-def sample_loopback_interface():
+def sample_loopback_interface() -> InterfaceInfo:
     """Create a sample loopback interface for testing."""
     return InterfaceInfo(
         name="lo",
@@ -154,11 +156,11 @@ def sample_loopback_interface():
 
 @pytest.fixture
 def sample_interface_list(
-    sample_loopback_interface,
-    sample_ethernet_interface,
-    sample_wireless_interface,
-    sample_vpn_interface,
-):
+    sample_loopback_interface: InterfaceInfo,
+    sample_ethernet_interface: InterfaceInfo,
+    sample_wireless_interface: InterfaceInfo,
+    sample_vpn_interface: InterfaceInfo,
+) -> list[InterfaceInfo]:
     """Create a list of sample interfaces for testing."""
     return [
         sample_loopback_interface,

