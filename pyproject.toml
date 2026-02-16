@@ -98,7 +98,7 @@ markers = [
 branch = true
 source = ["."]
 omit = [
-#    "tests/*",
+    "tests/*",
     "setup.py",
     "*/__pycache__/*",
     "*/site-packages/*",
