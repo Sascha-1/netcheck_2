@@ -58,7 +58,7 @@ def detect_interface_type(iface_name: str) -> InterfaceType:
 
     Priority:
         1. Loopback (name == "lo")
-        2. Cellular modem (ModemManager recognition)
+        2. Cellular modem (ModemManager port-name lookup)
         3. USB tethering (sysfs driver check, not in ModemManager)
         4. VPN name (vpn/tun/tap/ppp/wg)
         5. Wireless (sysfs phy80211)
@@ -76,7 +76,7 @@ def detect_interface_type(iface_name: str) -> InterfaceType:
     # Each returns (matched: bool, type: InterfaceType | None)
     detectors: list[TypeDetector] = [
         _detect_loopback,
-        _detect_cellular_modem,  # NEW: Check ModemManager BEFORE tethering
+        _detect_cellular_modem,
         _detect_usb_tether,
         _detect_vpn_by_name,
         _detect_wireless,
@@ -106,39 +106,42 @@ def _detect_loopback(iface_name: str) -> tuple[bool, InterfaceType | None]:
 
 
 def _detect_cellular_modem(iface_name: str) -> tuple[bool, InterfaceType | None]:
-    """Detect cellular modem via ModemManager.
+    """Detect cellular modem via ModemManager port-name lookup.
 
-    This is the deterministic way to distinguish cellular modems from
-    USB phone tethering. ModemManager maintains a database of supported
-    modems and only manages actual cellular modems, not phones.
+    ModemManager's ``mmcli -m <index> -K`` output contains a ports section
+    that lists every port the modem exposes, each annotated with its type::
 
-    Algorithm:
-        1. Get all ModemManager-managed modems
-        2. Get device path for this interface
-        3. Check if interface device path matches any modem
+        modem.generic.ports.value[1] : cdc-wdm1 (mbim)
+        modem.generic.ports.value[2] : ttyUSB0 (at)
+        modem.generic.ports.value[3] : wwp195s0f3u4 (net)
+
+    The ``(net)`` annotation identifies the network interface that carries
+    data traffic for the modem.  Checking whether ``iface_name`` appears in
+    this set is both unambiguous and immune to the substring-match collision
+    that affected the previous sysfs-path approach.
+
+    Previous approach and why it failed:
+        The old implementation extracted ``modem.generic.device`` from mmcli
+        output and compared it to the sysfs device path of each interface.
+        The substring check ``"modem.generic.device" in line`` matched
+        ``modem.generic.device-identifier`` first (which holds a hash, not a
+        path), so the correct sysfs path on the following line was never read.
+
+    Args:
+        iface_name: Interface name to test.
 
     Returns:
-        (True, CELLULAR) if ModemManager recognizes this as a modem
-        (False, None) otherwise
+        ``(True, InterfaceType.CELLULAR)`` if ModemManager owns this
+        interface; ``(False, None)`` otherwise.
     """
-    # Get device path for this interface
-    device_path = _get_device_path(iface_name)
-    if not device_path:
-        return (False, None)
+    modem_ifaces = _get_modemmanager_managed_interfaces()
 
-    # Get all modem device paths from ModemManager
-    modem_paths = _get_modemmanager_device_paths()
-
-    # Check if this interface's device is managed by ModemManager
-    device_path_str = str(device_path)
-    for modem_path in modem_paths:
-        # Match if modem path is a parent of device path or exact match
-        if device_path_str.startswith(modem_path) or modem_path.startswith(device_path_str):
-            logger.info(
-                "[%s] Recognized as cellular modem by ModemManager",
-                sanitize_for_log(iface_name)
-            )
-            return (True, InterfaceType.CELLULAR)
+    if iface_name in modem_ifaces:
+        logger.info(
+            "[%s] Recognised as cellular modem by ModemManager",
+            sanitize_for_log(iface_name),
+        )
+        return (True, InterfaceType.CELLULAR)
 
     return (False, None)
 
@@ -146,8 +149,9 @@ def _detect_cellular_modem(iface_name: str) -> tuple[bool, InterfaceType | None]
 def _detect_usb_tether(iface_name: str) -> tuple[bool, InterfaceType | None]:
     """Detect USB tethered device (phone sharing internet).
 
-    This runs AFTER cellular modem detection, so if we get here and
-    find USB tether drivers, it's actually phone tethering, not a modem.
+    Runs after cellular modem detection, so any interface that reaches this
+    point and matches a USB tether driver is genuinely phone tethering rather
+    than a cellular modem.
     """
     if is_usb_tethered_device(iface_name):
         return (True, InterfaceType.TETHER)
@@ -204,64 +208,90 @@ def _detect_by_name_pattern(iface_name: str) -> tuple[bool, InterfaceType | None
 
 
 @lru_cache(maxsize=1)
-def _get_modemmanager_device_paths() -> list[str]:
-    """Query ModemManager for all managed modem device paths.
+def _get_modemmanager_managed_interfaces() -> frozenset[str]:
+    """Return the set of network interface names managed by ModemManager.
 
-    Uses mmcli to query ModemManager D-Bus interface.
-    Cached since modem list doesn't change during a single run.
+    Queries ModemManager via ``mmcli`` and parses each modem's port list,
+    collecting every port annotated as ``(net)``.  The result is cached for
+    the lifetime of the process because the modem list does not change during
+    a single run.
 
     Algorithm:
-        1. List all modems: mmcli -L
-        2. For each modem index, query device path: mmcli -m <index> -K
-        3. Extract modem.generic.device value
+        1. ``mmcli -L`` — enumerate modem indices.
+        2. For each index, ``mmcli -m <index> -K`` — fetch key/value details.
+        3. Collect lines matching ``modem.generic.ports.value[N]``.
+        4. Keep only entries whose parenthesised type token is ``net``.
+        5. Return the interface names as a ``frozenset``.
+
+    Example mmcli port lines::
+
+        modem.generic.ports.value[1] : cdc-wdm1 (mbim)
+        modem.generic.ports.value[2] : ttyUSB0 (at)
+        modem.generic.ports.value[3] : wwp195s0f3u4 (net)
+
+    Why ``frozenset`` and not ``set``:
+        ``lru_cache`` requires the return value to be consistently usable
+        across calls.  ``frozenset`` is immutable and hashable, which also
+        prevents callers from accidentally mutating the cached result.
 
     Returns:
-        List of device paths (e.g., ['/sys/devices/pci0000:00/...'])
+        ``frozenset`` of interface names (e.g. ``frozenset({'wwp195s0f3u4'})``)
+        or an empty ``frozenset`` when ModemManager reports no modems or the
+        ``mmcli`` command is unavailable.
     """
-    # Step 1: List all modems
-    output = run_command(["mmcli", "-L"])
-    if not output:
+    # Step 1: enumerate modems
+    list_output = run_command(["mmcli", "-L"])
+    if not list_output:
         logger.debug("ModemManager returned no modems")
-        return []
+        return frozenset()
 
-    # Parse modem indices from output
-    # Format: "/org/freedesktop/ModemManager1/Modem/0 [Quectel] EM05-G"
-    modem_indices = []
-    for line in output.split("\n"):
+    # Parse modem indices: "/org/freedesktop/ModemManager1/Modem/0 [Quectel] EM05-G"
+    modem_indices: list[str] = []
+    for line in list_output.split("\n"):
         match = re.search(r"/Modem/(\d+)", line)
         if match:
             modem_indices.append(match.group(1))
 
     if not modem_indices:
         logger.debug("No modem indices found in ModemManager output")
-        return []
+        return frozenset()
 
     logger.debug("Found %d modem(s) in ModemManager", len(modem_indices))
 
-    # Step 2: Query each modem's device path
-    device_paths = []
+    # Step 2–4: collect (net) ports from each modem
+    #
+    # Target line format:
+    #   modem.generic.ports.value[N] : <iface_name> (<type>)
+    #
+    # The regex captures:
+    #   group 1 — interface name (non-space characters before the space)
+    #   group 2 — type token inside parentheses
+    port_pattern = re.compile(
+        r"modem\.generic\.ports\.value\[\d+\]\s*:\s*(\S+)\s+\((\w+)\)"
+    )
+
+    net_interfaces: set[str] = set()
+
     for index in modem_indices:
-        # Query modem details in key-value format
-        output = run_command(["mmcli", "-m", index, "-K"])
-        if not output:
+        kv_output = run_command(["mmcli", "-m", index, "-K"])
+        if not kv_output:
+            logger.debug("mmcli -m %s -K returned no output", index)
             continue
 
-        # Extract device path
-        # Format: "modem.generic.device : /sys/devices/pci0000:00/..."
-        for line in output.split("\n"):
-            if "modem.generic.device" in line:
-                match = re.search(r":\s*(.+)$", line)
-                if match:
-                    device_path = match.group(1).strip()
-                    device_paths.append(device_path)
+        for line in kv_output.split("\n"):
+            match = port_pattern.search(line)
+            if match:
+                iface_name = match.group(1)
+                port_type = match.group(2).lower()
+                if port_type == "net":
                     logger.debug(
-                        "ModemManager modem %s device path: %s",
+                        "ModemManager modem %s owns network interface: %s",
                         index,
-                        sanitize_for_log(device_path)
+                        sanitize_for_log(iface_name),
                     )
-                    break
+                    net_interfaces.add(iface_name)
 
-    return device_paths
+    return frozenset(net_interfaces)
 
 
 def is_usb_tethered_device(iface: str) -> bool:
@@ -480,9 +510,9 @@ def _find_usb_device_ids(start_path: Path) -> tuple[str, str] | None:
 def _get_usb_info(iface: str) -> tuple[bool, str | None, tuple[str, str] | None]:
     """Get USB info (cached for performance).
 
-    FIXED: Walks up sysfs tree to find USB device IDs.
+    Walks up sysfs tree to find USB device IDs.
     Network interfaces point to USB interface (5-8:1.0), but IDs are at
-    device level (5-8). This function now walks up to find them.
+    device level (5-8). This function walks up to find them.
 
     Args:
         iface: Interface name
@@ -508,7 +538,7 @@ def _get_usb_info(iface: str) -> tuple[bool, str | None, tuple[str, str] | None]
     if driver_link.exists() and driver_link.is_symlink():
         driver = driver_link.resolve().name
 
-    # Get USB IDs - FIXED: Walk up tree to find device level
+    # Get USB IDs — walk up tree to find device level
     ids = _find_usb_device_ids(device_path)
 
     return (is_usb, driver, ids)
